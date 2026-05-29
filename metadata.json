@@ -1,0 +1,6 @@
+{
+  "name": "WebMinecraft",
+  "description": "WebMinecraft Survival & Crafting Update. A high-performance 3D voxel builder in the browser.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
