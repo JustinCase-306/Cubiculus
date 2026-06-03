@@ -277,9 +277,9 @@ import { lang as en } from './lang_en.js';
                         r = v; g = v - 12; b = v - 64;
                         if (Math.random() < 0.12) { r -= 15; g -= 15; } // Noise grains
                     } else if (type === 'water') {
-                        // Fluid water texture base
-                        r = 35; g = 85; b = 240; a = 0.55;
-                        if ((x + y) % 4 === 0) { r += 15; g += 15; b += 15; }
+                        // Fluid water texture base (darker, deeper blue)
+                        r = 15; g = 45; b = 150; a = 0.65;
+                        if ((x + y) % 4 === 0) { r += 10; g += 10; b += 10; }
                     } else if (type === 'planks') {
                         // Super clean classic 16x16 Minecraft oak planks
                         let row = Math.floor(y / 4);
@@ -523,7 +523,7 @@ import { lang as en } from './lang_en.js';
             ],
             [BLOCKS.SAND]: new THREE.MeshLambertMaterial({ map: texData.sand.tex }),
             [BLOCKS.LEAVES]: new THREE.MeshLambertMaterial({ map: texData.leaves.tex, transparent: true, opacity: 0.90, side: THREE.DoubleSide, alphaTest: 0.2, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
-            [BLOCKS.WATER]: new THREE.MeshLambertMaterial({ map: texData.water.tex, transparent: true, opacity: 0.60, side: THREE.DoubleSide }),
+            [BLOCKS.WATER]: new THREE.MeshLambertMaterial({ map: texData.water.tex, transparent: true, opacity: 0.75, side: THREE.DoubleSide }),
             [BLOCKS.PLANKS]: new THREE.MeshLambertMaterial({ map: texData.planks.tex }),
             [BLOCKS.GLASS]: new THREE.MeshLambertMaterial({ map: texData.glass.tex, transparent: true, opacity: 0.40, side: THREE.DoubleSide }),
             [BLOCKS.DIAMOND]: new THREE.MeshLambertMaterial({ map: texData.diamond.tex }),
@@ -563,7 +563,7 @@ import { lang as en } from './lang_en.js';
             [BLOCKS.DIAMOND_SWORD]: "Diamantschwert"
         };
 
-        function loadCustomLogTextures() {
+        function loadCustomTextures() {
             const sideImg = new Image();
             sideImg.onload = () => {
                 if (sideImg.width === 0 || sideImg.height === 0) return;
@@ -603,9 +603,29 @@ import { lang as en } from './lang_en.js';
                 console.warn("Failed to load sprites/LogTop.png, using procedural fallback.");
             };
             topImg.src = 'sprites/LogTop.png';
+
+            const waterImg = new Image();
+            waterImg.onload = () => {
+                if (waterImg.width === 0 || waterImg.height === 0) return;
+                const item = texData.water;
+                if (item && item.canvas) {
+                    item.canvas.width = waterImg.width;
+                    item.canvas.height = waterImg.height;
+                    const ctx = item.canvas.getContext('2d');
+                    ctx.clearRect(0, 0, item.canvas.width, item.canvas.height);
+                    ctx.drawImage(waterImg, 0, 0);
+                    item.tex.needsUpdate = true;
+                    if (typeof updateInventoryUI === 'function') updateInventoryUI();
+                    if (typeof updateHeldItemUI === 'function') updateHeldItemUI();
+                }
+            };
+            waterImg.onerror = () => {
+                console.warn("Failed to load sprites/WaterTop.png, using procedural fallback.");
+            };
+            waterImg.src = 'sprites/WaterTop.png';
         }
 
-        loadCustomLogTextures();
+        loadCustomTextures();
 
         function draw2DIcon(canvas, blockType) {
             if (!canvas) return;
@@ -2643,9 +2663,16 @@ import { lang as en } from './lang_en.js';
             if (controls.isLocked && document.activeElement !== chatInput) {
                 
                 // Unterwasser Check
-                const headBlock = getBlock(player.pos.x, player.pos.y, player.pos.z);
-                player.inWater = (headBlock === BLOCKS.WATER);
-                document.getElementById('underwater-tint').style.display = player.inWater ? 'block' : 'none';
+                const feetBlock = getBlock(player.pos.x, player.pos.y, player.pos.z);
+                const waistBlock = getBlock(player.pos.x, player.pos.y + 0.9, player.pos.z);
+                player.inWater = (feetBlock === BLOCKS.WATER || waistBlock === BLOCKS.WATER);
+
+                const headBlock = getBlock(camera.position.x, camera.position.y, camera.position.z);
+                const isHeadInWater = (headBlock === BLOCKS.WATER);
+                document.getElementById('underwater-tint').style.display = isHeadInWater ? 'block' : 'none';
+                if (materials && materials[BLOCKS.LEAVES]) {
+                    materials[BLOCKS.LEAVES].visible = !isHeadInWater;
+                }
 
                 const moveDir = new THREE.Vector3();
                 if (keys['KeyW']) moveDir.z += 1;

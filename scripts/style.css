@@ -1,0 +1,232 @@
+* {
+    font-family: 'Press Start 2P', monospace !important;
+    image-rendering: pixelated;
+}
+body { 
+    margin: 0; 
+    overflow: hidden; 
+    background-color: #78A7FF; 
+    user-select: none;
+    font-size: 10px;
+}
+canvas { display: block; }
+
+/* Überschreibungen für kompakte PixelArt-Schriftgrößen */
+.text-3xl { font-size: 22px !important; text-shadow: 3px 3px 0px rgba(0,0,0,0.5); }
+.text-base { font-size: 11px !important; }
+.text-sm { font-size: 9px !important; }
+.text-xs { font-size: 8px !important; }
+
+#crosshair {
+    position: absolute; top: 50%; left: 50%;
+    width: 16px; height: 16px;
+    transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 10;
+}
+#crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: white; mix-blend-mode: difference;
+}
+#crosshair::before { top: 0; left: 7px; width: 2px; height: 16px; }
+#crosshair::after { top: 7px; left: 0; width: 16px; height: 2px; }
+
+/* Minecraft-Style Hotbar */
+#hotbar {
+    position: absolute; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; background: #c6c6c6;
+    padding: 4px; border: 4px solid;
+    border-color: #ffffff #555555 #555555 #ffffff;
+    z-index: 20;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+}
+.slot {
+    width: 46px; height: 46px; 
+    display: flex; align-items: center; justify-content: center;
+    background: #8b8b8b; border: 4px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    margin: 0 2px;
+    position: relative;
+    cursor: pointer;
+}
+.slot.active { 
+    border-color: #ffffff #555555 #555555 #ffffff;
+    background: #bebebe;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+.slot canvas { width: 32px; height: 32px; pointer-events: none; }
+.slot::after {
+    content: attr(data-key);
+    position: absolute; bottom: 1px; right: 2px;
+    color: #ccc; font-size: 7px; font-weight: bold;
+    pointer-events: none;
+}
+.qty {
+    position: absolute; bottom: 2px; right: 2px;
+    color: #fff; font-size: 8px; font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#ui {
+    position: absolute; top: 20px; left: 20px;
+    color: #373737;
+    pointer-events: auto; font-size: 8px;
+    z-index: 20; background: #c6c6c6; padding: 14px;
+    border: 4px solid;
+    border-color: #ffffff #555555 #555555 #ffffff;
+    box-shadow: 6px 6px 0px rgba(0,0,0,0.4);
+}
+#overlay {
+    position: absolute; width: 100%; height: 100%;
+    background: rgba(16, 16, 16, 0.75);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: white; cursor: pointer; z-index: 100;
+}
+#underwater-tint {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 6, 32, 0.85);
+    pointer-events: none;
+    display: none;
+    z-index: 5;
+}
+.action-btn {
+    pointer-events: auto;
+    background: #8b8b8b;
+    border: 4px solid;
+    border-color: #ffffff #555555 #555555 #ffffff;
+    padding: 10px 20px; border-radius: 0px;
+    color: #e0e0e0;
+    font-family: 'Press Start 2P', monospace !important;
+    font-size: 8px !important;
+    text-shadow: 1px 1px 0px #222222;
+    font-weight: bold; cursor: pointer;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    user-select: none;
+}
+.action-btn:hover {
+    background: #9d9d9d;
+    color: #ffffa0;
+    border-color: #ffffff #555555 #555555 #ffffff;
+}
+.action-btn:active {
+    background: #555555;
+    border-color: #373737 #ffffff #ffffff #373737;
+    color: #8b8b8b;
+}
+#save-indicator {
+    position: absolute; top: 20px; right: 20px;
+    background: #2a2a2a; color: #e0e0e0;
+    border: 4px solid;
+    border-color: #8b8b8b #1a1a1a #1a1a1a #8b8b8b;
+    padding: 12px 24px;
+    font-size: 8px; font-weight: bold;
+    box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+    opacity: 0; transform: translateY(-20px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 90; pointer-events: none;
+    text-shadow: 1px 1px 0px #000;
+}
+
+/* Minecraft-Style Inventar Overlay */
+#inventory-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 80;
+}
+.mc-container {
+    background: #c6c6c6;
+    border: 5px solid;
+    border-color: #ffffff #5b5b5b #5b5b5b #ffffff;
+    padding: 24px;
+    box-shadow: 10px 10px 0px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative;
+}
+.mc-header {
+    color: #404040;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex; justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid #8b8b8b;
+    padding-bottom: 12px;
+}
+.mc-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 6px;
+}
+.mc-slot {
+    width: 48px; height: 48px;
+    background: #8b8b8b;
+    border: 4px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    cursor: pointer;
+}
+.mc-slot:hover {
+    background: #bebebe;
+    border-color: #ffffff #373737 #373737 #ffffff;
+}
+.mc-slot canvas {
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+}
+.mc-slot.craft-out {
+    background: #9d9d9d;
+    border-color: #555 #fff #fff #555;
+    width: 60px; height: 60px;
+}
+.mc-crafting-area {
+    display: flex; align-items: center; justify-content: center;
+    gap: 30px; background: rgba(0,0,0,0.15);
+    padding: 20px; border: 4px solid #8b8b8b;
+}
+.mc-craft-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+.craft-arrow {
+    font-size: 30px; color: #404040;
+    user-select: none;
+}
+/* Folgender Cursor beim Tragen von Items */
+#cursor-item {
+    position: fixed;
+    width: 36px; height: 36px;
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+    transform: translate(-50%, -50%);
+}
+#cursor-item canvas { width: 36px; height: 36px; }
+#cursor-qty {
+    position: absolute; bottom: 0; right: 0;
+    color: white; font-size: 10px; font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* Sunken Inset Slot Style */
+.mc-inset {
+    background: #313131;
+    border: 4px solid;
+    border-color: #1a1a1a #8b8b8b #8b8b8b #1a1a1a;
+    padding: 12px;
+    color: #e0e0e0;
+}
+
+/* Minecraft Styled Popups and Panels */
+.mc-panel {
+    background: #c6c6c6;
+    border: 5px solid;
+    border-color: #ffffff #5b5b5b #5b5b5b #ffffff;
+    box-shadow: 10px 10px 0px rgba(0,0,0,0.45);
+}
