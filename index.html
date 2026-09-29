@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrowserCraft // 3D Voxel Sandbox</title>
+    <meta name="description" content="BrowserCraft 3D Voxel Sandbox mit authentischer Minecraft Java Edition Benutzeroberfläche, Hotbar, Inventar, Crafting, Seeds und flüssiger 60 FPS Grafik.">
+    <meta property="og:title" content="BrowserCraft // 3D Voxel Sandbox">
+    <meta property="og:description" content="BrowserCraft 3D Voxel Sandbox mit authentischer Minecraft Java Edition Benutzeroberfläche, Hotbar, Inventar, Crafting, Seeds und flüssiger 60 FPS Grafik.">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Minecraft Pixel Font: Press Start 2P -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <!-- Minecraft Java Style CSS -->
+    <link rel="stylesheet" href="/scripts/style.css">
+</head>
+<body class="pixel-ui">
+
+    <!-- Screen Filters & Notifications -->
+    <div id="underwater-tint"></div>
+    <div id="save-indicator">SPIELSTAND GESPEICHERT!</div>
+
+    <!-- =======================================================================
+         MINECRAFT JAVA MAIN MENU & ESCAPE SCREEN
+         ======================================================================= -->
+    <div id="overlay">
+        <div class="mc-menu-panel">
+            
+            <!-- 3D Pixel Stone Title & Angled Yellow Splash Text -->
+            <div class="mc-title-box">
+                <div class="mc-logo" id="main-title">BROWSER CRAFT</div>
+                <div class="mc-splash" id="splash-text">100% Im Browser!</div>
+                <div class="mc-subtitle" id="sub-title">3D VOXEL SANDBOX // JAVA EDITION STIL</div>
+            </div>
+
+            <!-- Authentic Minecraft Menu Buttons -->
+            <div class="mc-menu-list">
+                <!-- Back to Game / Singleplayer Play -->
+                <button id="play-btn" class="mc-btn primary w-full text-xs" onclick="requestGameLock()">
+                    ZURUECK ZUM SPIEL
+                </button>
+
+                <!-- Dual Columns 1: Worlds & Inventory -->
+                <div class="mc-row-2">
+                    <button id="saves-btn" class="mc-btn text-[9px]" onclick="toggleSaveSlotsModal(event)">
+                        WELTEN / SLOTS
+                    </button>
+                    <button id="menu-inv-btn" class="mc-btn text-[9px]" onclick="toggleInventory(event)">
+                        INVENTAR (E)
+                    </button>
+                </div>
+
+                <!-- Dual Columns 2: Options & Save -->
+                <div class="mc-row-2">
+                    <button id="settings-btn" class="mc-btn text-[9px]" onclick="toggleSettingsModal(event)">
+                        OPTIONEN...
+                    </button>
+                    <button id="menu-save-btn" class="mc-btn text-[9px]" onclick="saveWorld(event)">
+                        WELT SPEICHERN
+                    </button>
+                </div>
+
+                <!-- Dual Columns 3: Reset World & Language -->
+                <div class="mc-row-2">
+                    <button id="menu-reset-btn" class="mc-btn danger text-[9px]" onclick="triggerResetModal(event)">
+                        WELT ZURUECKSETZEN
+                    </button>
+                    <button id="lang-btn" class="mc-btn text-[9px]" onclick="toggleLanguage(event)">
+                        SPRACHE: DE
+                    </button>
+                </div>
+            </div>
+
+            <div class="mc-footer-version">
+                BrowserCraft 1.20 (Web Three.js Edition)
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- =======================================================================
+         IN-GAME HUD (MINECRAFT JAVA AUTHENTIC HUD)
+         ======================================================================= -->
+
+    <!-- Center Reticle (Crosshair) -->
+    <div id="crosshair"></div>
+
+    <!-- Top-Left Quick Action Bar (No emojis) -->
+    <div id="hud-quick-actions">
+        <button class="mc-btn mc-btn-sm" onclick="toggleSettingsModal(event)">
+            OPTIONEN
+        </button>
+        <button class="mc-btn mc-btn-sm" onclick="toggleSaveSlotsModal(event)">
+            WELTEN
+        </button>
+        <button class="mc-btn mc-btn-sm" onclick="saveWorld(event)">
+            SPEICHERN
+        </button>
+        <button class="mc-btn mc-btn-sm" id="hud-f3-btn" onclick="window.toggleF3Overlay()">
+            F3 DEBUG
+        </button>
+    </div>
+
+    <!-- F3 Debug Screen (Toggled with F3 or button) -->
+    <div id="f3-overlay">
+        <div class="text-[#ffff55] font-bold">BrowserCraft 1.20 (WebGL 2.0)</div>
+        <div>FPS: <span id="fps-badge" class="text-[#55ff55]">60 FPS</span></div>
+        <div>XYZ: <span id="pos" class="text-white">0.0 / 64.0 / 0.0</span></div>
+        <div>Block: <span id="block-pos" class="text-white">0 64 0</span></div>
+        <div>Facing: <span id="facing" class="text-white">Nord (Negative Z)</span></div>
+        <div>Zeit: <span id="time" class="text-white">Tag (12:00)</span></div>
+        <div>Chunks: <span id="chunkCount" class="text-white">0</span></div>
+        <div>Biom: <span id="f3-biome" class="text-[#55ff55]">PLAINS</span></div>
+        <div>Seed: <span id="f3-seed" class="text-[#ffff55]">browsercraft</span></div>
+        <div>Ducken: <span id="f3-crouch" class="text-white">Nein</span></div>
+        <div class="text-[7px] text-[#aaaaaa] mt-1">[WASD] Bewegen &bull; [LEER] Sprung &bull; [SHIFT] Ducken &bull; [E] Inventar &bull; [Q] Drop</div>
+    </div>
+
+    <!-- Bottom Center HUD: Hotbar, Hearts, Armor, Food, XP Bar -->
+    <div id="hud-center-container">
+        
+        <!-- Toast Item Name when changing slot -->
+        <div id="hotbar-item-name">
+            Holzspitzhacke
+        </div>
+
+        <!-- Vitals Row (Hearts + Armor on Left, Hunger on Right) -->
+        <div id="hud-vitals-row">
+            <div class="mc-hearts-col">
+                <!-- 10 Pixel Art Armor Icons (No Emojis) -->
+                <div class="mc-armor-strip" id="mc-armor" title="Ruestung">
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                    <svg class="mc-armor-icon" viewBox="0 0 9 9"><path d="M1,1 H8 V5 H7 V7 H6 V8 H5 V9 H4 V9 H3 V8 H2 V7 H1 V5 Z" fill="#000" /><path d="M2,2 H7 V4 H6 V6 H5 V7 H4 V7 H3 V6 H2 V4 Z" fill="#c0c0c8" /><rect x="3" y="2" width="1" height="3" fill="#ffffff" /></svg>
+                </div>
+                <!-- 10 Pixel Art Hearts (No Emojis) -->
+                <div class="mc-hearts-strip" id="mc-hearts" title="Leben">
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                    <svg class="mc-heart" viewBox="0 0 9 9"><path d="M1,2 H3 V1 H4 V2 H5 V1 H6 V2 H8 V5 H7 V6 H6 V7 H5 V8 H4 V8 H3 V7 H2 V6 H1 V5 Z" fill="#000" /><path d="M1,3 H3 V2 H4 V3 H5 V2 H6 V3 H8 V4 H7 V5 H6 V6 H5 V7 H4 V7 H3 V6 H2 V5 H1 V4 Z" fill="#e01010" /><rect x="2" y="2" width="1" height="1" fill="#ffffff" /></svg>
+                </div>
+            </div>
+
+            <!-- 10 Pixel Art Hunger Icons (No Emojis) -->
+            <div class="mc-hunger-strip" id="mc-hunger" title="Hunger">
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+                <svg class="mc-hunger-icon" viewBox="0 0 9 9"><path d="M3,1 H7 V2 H8 V6 H7 V7 H5 V8 H4 V8 H3 V7 H2 V6 H3 V5 H2 V4 H3 V3 Z" fill="#000" /><path d="M4,2 H6 V3 H7 V5 H6 V6 H5 V7 H4 V6 H3 V4 H4 Z" fill="#b86020" /><rect x="1" y="7" width="2" height="1" fill="#e8e8e8" /><rect x="0" y="6" width="1" height="3" fill="#e8e8e8" /></svg>
+            </div>
+        </div>
+
+        <!-- Experience Bar & Level -->
+        <div id="hud-xp-container">
+            <div id="hud-xp-fill"></div>
+            <div id="hud-xp-level">30</div>
+            <div id="hud-crouch-tag">DUCKEN</div>
+        </div>
+
+        <!-- 9-Slot Hotbar -->
+        <div id="hotbar">
+            <div class="slot active" data-id="1" data-key="1"><div class="qty" id="qty-0"></div><canvas id="icon-0"></canvas></div>
+            <div class="slot" data-id="2" data-key="2"><div class="qty" id="qty-1"></div><canvas id="icon-1"></canvas></div>
+            <div class="slot" data-id="3" data-key="3"><div class="qty" id="qty-2"></div><canvas id="icon-2"></canvas></div>
+            <div class="slot" data-id="4" data-key="4"><div class="qty" id="qty-3"></div><canvas id="icon-3"></canvas></div>
+            <div class="slot" data-id="5" data-key="5"><div class="qty" id="qty-4"></div><canvas id="icon-4"></canvas></div>
+            <div class="slot" data-id="6" data-key="6"><div class="qty" id="qty-5"></div><canvas id="icon-5"></canvas></div>
+            <div class="slot" data-id="7" data-key="7"><div class="qty" id="qty-6"></div><canvas id="icon-6"></canvas></div>
+            <div class="slot" data-id="8" data-key="8"><div class="qty" id="qty-7"></div><canvas id="icon-7"></canvas></div>
+            <div class="slot" data-id="9" data-key="9"><div class="qty" id="qty-8"></div><canvas id="icon-8"></canvas></div>
+        </div>
+
+    </div>
+
+    <!-- Chat Console -->
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <input id="chat-input" type="text" placeholder="Druecke T oder Enter zum Chatten..." class="hidden" maxlength="80" />
+    </div>
+
+    <!-- =======================================================================
+         MINECRAFT JAVA OPTIONS / SETTINGS MODAL
+         ======================================================================= -->
+    <div id="settings-modal" class="mc-modal-overlay hidden select-none">
+        <div class="mc-options-window">
+            
+            <div class="mc-options-header" id="settings-modal-title">
+                OPTIONEN
+            </div>
+
+            <!-- Minecraft Navigation Tabs (No emojis) -->
+            <div class="mc-options-tabs">
+                <button class="mc-tab-btn active" id="tab-btn-keyboard" onclick="switchSettingsTab('keyboard')">
+                    TASTEN
+                </button>
+                <button class="mc-tab-btn" id="tab-btn-graphics" onclick="switchSettingsTab('graphics')">
+                    GRAFIK
+                </button>
+                <button class="mc-tab-btn" id="tab-btn-audio" onclick="switchSettingsTab('audio')">
+                    AUDIO
+                </button>
+                <button class="mc-tab-btn" id="tab-btn-gameplay" onclick="switchSettingsTab('gameplay')">
+                    WELT & SEEDS
+                </button>
+            </div>
+
+            <div class="mc-options-body">
+
+                <!-- TAB 1: TASTATUR-STEUERUNG & KEYBINDS -->
+                <div id="tab-content-keyboard" class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] text-[#373737] font-bold">STEUERUNG & TASTENBELEGUNG</span>
+                        <button class="mc-btn mc-btn-sm" onclick="resetKeybindings()">
+                            STANDARD
+                        </button>
+                    </div>
+                    <div class="text-[8px] text-[#444444]">
+                        Klicke auf eine Taste, um sie neu zu belegen. Druecke anschliessend deine gewuenschte Taste.
+                    </div>
+
+                    <div class="bg-[#8b8b8b] border-2 border-[#373737] p-1">
+                        <table class="mc-keybind-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">AKTION</th>
+                                    <th style="width: 50%; text-align: right;">TASTE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keybinds-table-body">
+                                <!-- Populated dynamically by renderKeybindsTable() -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: GRAFIK & THEMES & LIQUID GLASS -->
+                <div id="tab-content-graphics" class="flex flex-col gap-3 hidden">
+                    <div class="text-[9px] text-[#373737] font-bold">
+                        GRAFIK-EINSTELLUNGEN & FARBEN
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <!-- Render Distance Slider with LoD presets up to 128 Chunks -->
+                        <div class="mc-card sm:col-span-2">
+                            <div class="mc-card-header">
+                                <span>SICHTWEITE (LOD):</span>
+                                <span id="cfg-render-dist-lbl" class="text-[#205020]">128 Chunks (Ultra-LoD Horizon)</span>
+                            </div>
+                            <input type="range" id="cfg-render-dist" min="4" max="128" step="4" value="128" class="mc-slider mt-1" oninput="updateSetting('renderDistance', this.value)" />
+                            
+                            <div class="flex flex-wrap items-center justify-between gap-1 mt-2">
+                                <button class="mc-btn mc-btn-sm text-[7px]" onclick="updateSetting('renderDistance', 12); document.getElementById('cfg-render-dist').value = 12;">12 CHUNKS</button>
+                                <button class="mc-btn mc-btn-sm text-[7px]" onclick="updateSetting('renderDistance', 32); document.getElementById('cfg-render-dist').value = 32;">32 CHUNKS</button>
+                                <button class="mc-btn mc-btn-sm text-[7px]" onclick="updateSetting('renderDistance', 64); document.getElementById('cfg-render-dist').value = 64;">64 CHUNKS</button>
+                                <button class="mc-btn mc-btn-sm text-[7px] accent" onclick="updateSetting('renderDistance', 128); document.getElementById('cfg-render-dist').value = 128;">128 CHUNKS ULTRA-LOD</button>
+                            </div>
+                            <div class="text-[7px] text-[#444444] mt-1 font-mono">
+                                Hierarchisches LoD: Voll-3D (0-6), Chunk-LoD (7-12), 4x4 Macro (13-36), 8x8 Mega (37-128 Chunks).
+                            </div>
+                        </div>
+
+                        <!-- Master Volume Slider -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>LAUTSTAERKE:</span>
+                                <span id="cfg-volume-lbl" class="text-[#205020]">70%</span>
+                            </div>
+                            <input type="range" id="cfg-volume" min="0" max="1" step="0.05" class="mc-slider" oninput="updateSetting('volume', this.value)" />
+                        </div>
+
+                        <!-- Fog Toggle -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>NEBEL:</span>
+                                <span id="cfg-fog-enabled-lbl" class="text-[#205020]">AN</span>
+                            </div>
+                            <button id="cfg-fog-enabled-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="toggleFogSetting()">
+                                NEBEL UMSCHALTEN
+                            </button>
+                        </div>
+
+                        <!-- Liquid Glass Mode Toggle -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>LIQUID GLASS:</span>
+                                <span id="cfg-glass-lbl" class="text-[#205020]">DEAKTIVIERT</span>
+                            </div>
+                            <button id="cfg-glass-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="toggleLiquidGlassSetting()">
+                                GLAS-MODUS UMSCHALTEN
+                            </button>
+                        </div>
+
+                        <!-- Leaves Opacity -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>LAUB-TRANSPARENZ:</span>
+                                <span id="cfg-leaves-lbl" class="text-[#205020]">0.85</span>
+                            </div>
+                            <input type="range" id="cfg-leaves" min="0.2" max="1.0" step="0.05" class="mc-slider" oninput="updateSetting('leavesOpacity', this.value)" />
+                        </div>
+
+                        <!-- Pixel UI Mode -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>PIXEL-UI:</span>
+                                <span id="cfg-pixel-ui-lbl" class="text-[#205020]">AKTIVIERT</span>
+                            </div>
+                            <button id="cfg-pixel-ui-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="togglePixelUISetting()">
+                                PIXEL-UI UMSCHALTEN
+                            </button>
+                        </div>
+
+                        <!-- UI Themes Presets -->
+                        <div class="mc-card sm:col-span-2">
+                            <div class="mc-card-header">
+                                <span>UI FARBSCHEMA:</span>
+                                <span id="cfg-theme-lbl" class="text-[#205020]">KLASSISCH</span>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-amber" onclick="setThemeSetting('amber')">BERNSTEIN</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-portal" onclick="setThemeSetting('portal')">CYAN</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-emerald" onclick="setThemeSetting('emerald')">SMARAGD</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-amethyst" onclick="setThemeSetting('amethyst')">AMETHYST</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-ruby" onclick="setThemeSetting('ruby')">RUBIN</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-gold" onclick="setThemeSetting('gold')">GOLD</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-slate" onclick="setThemeSetting('slate')">SCHIEFER</button>
+                                <button class="mc-btn mc-btn-sm" id="btn-theme-custom" onclick="setThemeSetting('custom')">EIGENE</button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Colors -->
+                        <div class="mc-card sm:col-span-2">
+                            <div class="mc-card-header">
+                                <span>EIGENE FARBEN:</span>
+                            </div>
+                            <div class="flex items-center gap-4 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[8px] text-[#373737]">AKZENT:</span>
+                                    <input type="color" id="cfg-custom-accent" value="#55ff55" class="h-6 w-10 cursor-pointer bg-transparent border border-[#373737]" onchange="setCustomColor('accent', this.value)" />
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[8px] text-[#373737]">GLOW:</span>
+                                    <input type="color" id="cfg-custom-glow" value="#55ff55" class="h-6 w-10 cursor-pointer bg-transparent border border-[#373737]" onchange="setCustomColor('glow', this.value)" />
+                                </div>
+                                <button class="mc-btn mc-btn-sm ml-auto" onclick="setThemeSetting('custom')">
+                                    FARBEN ANWENDEN
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- TAB 3: AUDIO -->
+                <div id="tab-content-audio" class="flex flex-col gap-3 hidden">
+                    <div class="text-[9px] text-[#373737] font-bold">
+                        AUDIO & SOUNDS
+                    </div>
+                    <div class="mc-card">
+                        <div class="mc-card-header">
+                            <span>MASTER-LAUTSTAERKE:</span>
+                            <span id="cfg-volume-lbl-2" class="text-[#205020]">70%</span>
+                        </div>
+                        <input type="range" id="cfg-volume-2" min="0" max="1" step="0.05" class="mc-slider" oninput="updateSetting('volume', this.value)" />
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-[8px] text-[#555555]">Soundeffekte fuer Bloecke, Laufen & Umgebung</span>
+                            <button class="mc-btn mc-btn-sm" onclick="testAudioSound()">
+                                TEST
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: WELTEN & SEEDS -->
+                <div id="tab-content-gameplay" class="flex flex-col gap-3 hidden">
+                    <div class="text-[9px] text-[#373737] font-bold">
+                        WELTEN, SEEDS & GENERATOR
+                    </div>
+                    
+                    <div class="mc-card">
+                        <div class="mc-card-header">
+                            <span>WELT-SEED:</span>
+                            <span id="cfg-active-seed-lbl" class="font-mono text-[#205020]">browsercraft</span>
+                        </div>
+                        <div class="text-[8px] text-[#444444] mb-1">
+                            Gib einen beliebigen Text oder Zahlenwert ein, um eine prozedurale Landschaft zu generieren.
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 items-stretch">
+                            <input type="text" id="cfg-world-seed-input" value="browsercraft" class="mc-input flex-1" placeholder="Z. B. browsercraft, 1337" />
+                            <button class="mc-btn mc-btn-sm" onclick="generateRandomSeed()">
+                                ZUFALL
+                            </button>
+                            <button class="mc-btn mc-btn-sm accent" onclick="applySeedFromInput()">
+                                GENERIEREN
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-2">
+                        <button class="mc-btn flex-1 text-[9px]" onclick="toggleSaveSlotsModal(event)">
+                            WELTEN-SLOTS
+                        </button>
+                        <button class="mc-btn accent flex-1 text-[9px]" onclick="saveWorld(event)">
+                            SPEICHERN
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer: Done button -->
+            <div class="mc-options-footer">
+                <button class="mc-btn w-64 text-xs" onclick="toggleSettingsModal(event)">
+                    FERTIG
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         MINECRAFT JAVA SELECT WORLD / SAVE SLOTS MODAL
+         ======================================================================= -->
+    <div id="saves-modal" class="mc-modal-overlay hidden select-none">
+        <div class="mc-options-window">
+            
+            <div class="mc-options-header" id="saves-modal-title">
+                WELT AUSWAEHLEN
+            </div>
+
+            <div class="mc-options-body" id="saves-slots-container">
+                <!-- Populated dynamically by refreshSaveSlotsUI() -->
+            </div>
+
+            <div class="mc-options-footer flex justify-between gap-4">
+                <div>
+                    <input type="file" id="world-import-input" accept=".json" class="hidden" onchange="handleWorldImportFile(event)" />
+                    <button class="mc-btn text-[9px]" onclick="document.getElementById('world-import-input').click()">
+                        + AUS JSON IMPORTIEREN
+                    </button>
+                </div>
+                <button class="mc-btn text-[9px]" onclick="toggleSaveSlotsModal(event)">
+                    ABBRECHEN
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         MINECRAFT CONFIRM RESET MODAL
+         ======================================================================= -->
+    <div id="confirm-modal" class="mc-modal-overlay hidden select-none">
+        <div class="mc-window max-w-md w-full">
+            <div class="mc-window-header text-red-700">
+                <span>WARNUNG: WELT LOESCHEN?</span>
+                <button class="mc-close-btn" onclick="confirmReset(false)">X</button>
+            </div>
+            <div class="p-4 text-center flex flex-col gap-3">
+                <div class="text-[10px] text-[#222222] font-bold">
+                    Moechtest du diese Welt wirklich unwiderruflich zuruecksetzen?
+                </div>
+                <div class="text-[8px] text-[#555555]">
+                    Alle gebauten und abgebauten Bloecke in diesem Speicher-Slot gehen verloren.
+                </div>
+            </div>
+            <div class="flex justify-center gap-4 mt-2">
+                <button class="mc-btn danger text-[9px] px-6" onclick="confirmReset(true)">
+                    JA, LOESCHEN
+                </button>
+                <button class="mc-btn text-[9px] px-6" onclick="confirmReset(false)">
+                    ABBRECHEN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================================
+         MINECRAFT INVENTORY & CRAFTING OVERLAY (KEY: E)
+         ======================================================================= -->
+    <div id="inventory-overlay">
+        <div class="flex flex-col md:flex-row gap-4 items-start" onclick="event.stopPropagation()">
+            
+            <!-- Side Recipe Book (Toggled with Recipe Button) -->
+            <div class="hidden" id="recipe-book-panel">
+                <div class="mc-window-header">
+                    <span>REZEPTE</span>
+                    <button class="mc-close-btn" onclick="toggleRecipeBook()">X</button>
+                </div>
+                <div class="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-1" style="scrollbar-width: thin;">
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('planks')">
+                        <span class="text-[8px] font-bold text-[#373737]">BRETTER (x4)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-planks"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('stick')">
+                        <span class="text-[8px] font-bold text-[#373737]">STOCK (x4)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-stick"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('glass')">
+                        <span class="text-[8px] font-bold text-[#373737]">GLAS (x1)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-glass"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('ironingot')">
+                        <span class="text-[8px] font-bold text-[#373737]">EISEN (x1)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-ironingot"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('goldingot')">
+                        <span class="text-[8px] font-bold text-[#373737]">GOLD (x1)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-goldingot"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('brick')">
+                        <span class="text-[8px] font-bold text-[#373737]">ZIEGEL (x4)</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-brick"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('diamond_pickaxe')">
+                        <span class="text-[8px] font-bold text-[#373737]">DIAMANT-SPITZHACKE</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-diamondpick"></canvas></div>
+                    </div>
+                    <div class="mc-recipe-card" onclick="autoFillRecipe('diamond_sword')">
+                        <span class="text-[8px] font-bold text-[#373737]">DIAMANT-SCHWERT</span>
+                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-diamondsword"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentic Minecraft Java Inventory Window -->
+            <div class="mc-window mc-inv-window">
+                
+                <div class="mc-window-header">
+                    <span>HERSTELLUNG</span>
+                    <div class="flex gap-2">
+                        <button id="recipes-btn" class="mc-btn mc-btn-sm text-[8px]" onclick="toggleRecipeBook()">REZEPTE</button>
+                        <button id="close-btn" class="mc-close-btn" onclick="toggleInventory()">X</button>
+                    </div>
+                </div>
+
+                <!-- Upper Section: Player Character Box & 2x2 Crafting Grid -->
+                <div class="mc-crafting-box">
+                    <div class="mc-player-preview" title="Spieler">
+                        <!-- Pixel Art Character Steve Face (No emoji) -->
+                        <svg viewBox="0 0 8 8" width="44" height="44" style="image-rendering: pixelated;">
+                            <rect x="0" y="0" width="8" height="2" fill="#4a301a" />
+                            <rect x="0" y="2" width="1" height="2" fill="#4a301a" />
+                            <rect x="7" y="2" width="1" height="2" fill="#4a301a" />
+                            <rect x="1" y="2" width="6" height="4" fill="#c48a5c" />
+                            <rect x="1" y="3" width="1" height="1" fill="#ffffff" />
+                            <rect x="2" y="3" width="1" height="1" fill="#2b47b3" />
+                            <rect x="6" y="3" width="1" height="1" fill="#ffffff" />
+                            <rect x="5" y="3" width="1" height="1" fill="#2b47b3" />
+                            <rect x="3" y="4" width="2" height="1" fill="#a06040" />
+                            <rect x="2" y="5" width="4" height="1" fill="#583018" />
+                            <rect x="1" y="6" width="6" height="2" fill="#884824" />
+                        </svg>
+                    </div>
+                    <div class="flex-1 flex items-center justify-around">
+                        <!-- 2x2 Crafting Slots -->
+                        <div class="mc-craft-grid">
+                            <div class="mc-slot" id="craft-in-0" onclick="handleSlotClick(event, 40)" oncontextmenu="handleSlotRightClick(event, 40); return false;"></div>
+                            <div class="mc-slot" id="craft-in-1" onclick="handleSlotClick(event, 41)" oncontextmenu="handleSlotRightClick(event, 41); return false;"></div>
+                            <div class="mc-slot" id="craft-in-2" onclick="handleSlotClick(event, 42)" oncontextmenu="handleSlotRightClick(event, 42); return false;"></div>
+                            <div class="mc-slot" id="craft-in-3" onclick="handleSlotClick(event, 43)" oncontextmenu="handleSlotRightClick(event, 43); return false;"></div>
+                        </div>
+
+                        <!-- Crafting Arrow (Pixel Art SVG, No emoji) -->
+                        <div class="mc-craft-arrow">
+                            <svg viewBox="0 0 16 10" width="22" height="14" style="image-rendering: pixelated;">
+                                <path d="M0,4 H10 V1 H13 V3 H15 V5 H16 V6 H15 V7 H13 V9 H10 V6 H0 Z" fill="#373737" />
+                            </svg>
+                        </div>
+
+                        <!-- Crafting Output Slot -->
+                        <div class="mc-slot craft-out" id="craft-out" onclick="handleSlotClick(event, 44)"></div>
+                    </div>
+                </div>
+
+                <!-- Middle Section: 3x9 Main Inventory Grid (Slots 9..35) -->
+                <div>
+                    <div class="mc-inv-label">INVENTAR</div>
+                    <div class="mc-inv-grid" id="inv-backpack-grid">
+                        <!-- Dynamically filled with slots 9..35 -->
+                    </div>
+                </div>
+
+                <!-- Lower Section: 1x9 Hotbar Grid (Slots 0..8) -->
+                <div>
+                    <div class="mc-inv-label mt-2">SCHNELLZUGRIFF</div>
+                    <div class="mc-hotbar-grid" id="inv-hotbar-grid">
+                        <!-- Dynamically filled with slots 0..8 -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Floating Cursor Item When Dragging -->
+    <div id="cursor-item">
+        <canvas id="cursor-canvas"></canvas>
+        <div id="cursor-qty"></div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+
+    <script type="module" src="/scripts/game.js"></script>
+</body>
+</html>

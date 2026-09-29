@@ -1,232 +1,1052 @@
+/* ==========================================================================
+   BROWSER CRAFT // AUTHENTIC MINECRAFT JAVA EDITION DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+    /* Classic Minecraft Java Colors */
+    --mc-stone-bg: #c6c6c6;
+    --mc-stone-light: #ffffff;
+    --mc-stone-dark: #555555;
+    --mc-stone-darker: #373737;
+    --mc-slot-bg: #8b8b8b;
+    --mc-slot-dark: #373737;
+    --mc-slot-light: #ffffff;
+    --mc-btn-bg: #707070;
+    --mc-btn-hover-bg: #8b8b8b;
+    --mc-btn-hover-text: #ffffa0;
+    --mc-text-shadow: #3f3f3f;
+    --mc-yellow-shadow: #3f3f00;
+
+    /* Dirt Pattern Background */
+    --mc-dirt-bg: #2b1d12;
+    --mc-dirt-pattern: repeating-linear-gradient(45deg, #1c130b, #1c130b 16px, #261a0f 16px, #261a0f 32px);
+
+    /* Themes & Accent Colors */
+    --theme-accent: #55ff55;
+    --theme-glow: rgba(85, 255, 85, 0.4);
+    --theme-dim: rgba(85, 255, 85, 0.15);
+
+    /* Liquid Glass Variables (Optional Refraction Mode) */
+    --glass-blur: 24px;
+    --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(20, 20, 20, 0.8) 100%);
+    --glass-border: 2px solid rgba(255, 255, 255, 0.45);
+    --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Theme overrides */
+body.theme-amber {
+    --theme-accent: #ffaa00;
+    --theme-glow: rgba(255, 170, 0, 0.45);
+    --theme-dim: rgba(255, 170, 0, 0.18);
+}
+body.theme-portal {
+    --theme-accent: #00d2ff;
+    --theme-glow: rgba(0, 210, 255, 0.45);
+    --theme-dim: rgba(0, 210, 255, 0.18);
+}
+body.theme-emerald {
+    --theme-accent: #55ff55;
+    --theme-glow: rgba(85, 255, 85, 0.45);
+    --theme-dim: rgba(85, 255, 85, 0.18);
+}
+body.theme-amethyst {
+    --theme-accent: #c084fc;
+    --theme-glow: rgba(192, 132, 252, 0.45);
+    --theme-dim: rgba(192, 132, 252, 0.18);
+}
+body.theme-ruby {
+    --theme-accent: #ff5555;
+    --theme-glow: rgba(255, 85, 85, 0.45);
+    --theme-dim: rgba(255, 85, 85, 0.18);
+}
+body.theme-gold {
+    --theme-accent: #ffff55;
+    --theme-glow: rgba(255, 255, 85, 0.45);
+    --theme-dim: rgba(255, 255, 85, 0.18);
+}
+body.theme-slate {
+    --theme-accent: #aaaaaa;
+    --theme-glow: rgba(170, 170, 170, 0.45);
+    --theme-dim: rgba(170, 170, 170, 0.18);
+}
+body.theme-custom {
+    --theme-accent: #55ff55;
+    --theme-glow: rgba(85, 255, 85, 0.45);
+    --theme-dim: rgba(85, 255, 85, 0.18);
+}
+
+/* Base resets & typography */
 * {
-    font-family: 'Press Start 2P', monospace !important;
+    box-sizing: border-box;
     image-rendering: pixelated;
 }
-body { 
-    margin: 0; 
-    overflow: hidden; 
-    background-color: #78A7FF; 
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #000000;
     user-select: none;
-    font-size: 10px;
+    font-family: 'Press Start 2P', monospace, sans-serif;
+    color: #ffffff;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
 }
-canvas { display: block; }
 
-/* Überschreibungen für kompakte PixelArt-Schriftgrößen */
-.text-3xl { font-size: 22px !important; text-shadow: 3px 3px 0px rgba(0,0,0,0.5); }
-.text-base { font-size: 11px !important; }
-.text-sm { font-size: 9px !important; }
-.text-xs { font-size: 8px !important; }
+/* ==========================================================================
+   MINECRAFT BUTTON COMPONENT (.mc-btn)
+   ========================================================================== */
 
-#crosshair {
-    position: absolute; top: 50%; left: 50%;
-    width: 16px; height: 16px;
-    transform: translate(-50%, -50%);
-    pointer-events: none; z-index: 10;
-}
-#crosshair::before, #crosshair::after {
-    content: ''; position: absolute; background: white; mix-blend-mode: difference;
-}
-#crosshair::before { top: 0; left: 7px; width: 2px; height: 16px; }
-#crosshair::after { top: 7px; left: 0; width: 16px; height: 2px; }
-
-/* Minecraft-Style Hotbar */
-#hotbar {
-    position: absolute; bottom: 20px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; background: #c6c6c6;
-    padding: 4px; border: 4px solid;
-    border-color: #ffffff #555555 #555555 #ffffff;
-    z-index: 20;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-}
-.slot {
-    width: 46px; height: 46px; 
-    display: flex; align-items: center; justify-content: center;
-    background: #8b8b8b; border: 4px solid;
-    border-color: #373737 #ffffff #ffffff #373737;
-    margin: 0 2px;
+.mc-btn,
+.source-btn {
     position: relative;
-    cursor: pointer;
-}
-.slot.active { 
-    border-color: #ffffff #555555 #555555 #ffffff;
-    background: #bebebe;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-}
-.slot canvas { width: 32px; height: 32px; pointer-events: none; }
-.slot::after {
-    content: attr(data-key);
-    position: absolute; bottom: 1px; right: 2px;
-    color: #ccc; font-size: 7px; font-weight: bold;
-    pointer-events: none;
-}
-.qty {
-    position: absolute; bottom: 2px; right: 2px;
-    color: #fff; font-size: 8px; font-weight: bold;
-    text-shadow: 1px 1px 0 #000;
-    z-index: 10;
-    pointer-events: none;
-}
-
-#ui {
-    position: absolute; top: 20px; left: 20px;
-    color: #373737;
-    pointer-events: auto; font-size: 8px;
-    z-index: 20; background: #c6c6c6; padding: 14px;
-    border: 4px solid;
-    border-color: #ffffff #555555 #555555 #ffffff;
-    box-shadow: 6px 6px 0px rgba(0,0,0,0.4);
-}
-#overlay {
-    position: absolute; width: 100%; height: 100%;
-    background: rgba(16, 16, 16, 0.75);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    color: white; cursor: pointer; z-index: 100;
-}
-#underwater-tint {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 6, 32, 0.85);
-    pointer-events: none;
-    display: none;
-    z-index: 5;
-}
-.action-btn {
-    pointer-events: auto;
-    background: #8b8b8b;
-    border: 4px solid;
-    border-color: #ffffff #555555 #555555 #ffffff;
-    padding: 10px 20px; border-radius: 0px;
-    color: #e0e0e0;
-    font-family: 'Press Start 2P', monospace !important;
-    font-size: 8px !important;
-    text-shadow: 1px 1px 0px #222222;
-    font-weight: bold; cursor: pointer;
     display: inline-flex;
-    align-items: center; justify-content: center;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    height: 40px;
+    min-height: 40px;
+    background: #707070;
+    border-top: 2px solid #a0a0a0;
+    border-left: 2px solid #a0a0a0;
+    border-bottom: 2px solid #373737;
+    border-right: 2px solid #373737;
+    box-shadow: inset 2px 2px 0px #c6c6c6, inset -2px -2px 0px #555555;
+    color: #e0e0e0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    line-height: 1;
+    text-shadow: 2px 2px 0px #373737;
+    cursor: pointer;
     user-select: none;
-}
-.action-btn:hover {
-    background: #9d9d9d;
-    color: #ffffa0;
-    border-color: #ffffff #555555 #555555 #ffffff;
-}
-.action-btn:active {
-    background: #555555;
-    border-color: #373737 #ffffff #ffffff #373737;
-    color: #8b8b8b;
-}
-#save-indicator {
-    position: absolute; top: 20px; right: 20px;
-    background: #2a2a2a; color: #e0e0e0;
-    border: 4px solid;
-    border-color: #8b8b8b #1a1a1a #1a1a1a #8b8b8b;
-    padding: 12px 24px;
-    font-size: 8px; font-weight: bold;
-    box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
-    opacity: 0; transform: translateY(-20px);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 90; pointer-events: none;
-    text-shadow: 1px 1px 0px #000;
+    outline: none;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: none;
 }
 
-/* Minecraft-Style Inventar Overlay */
-#inventory-overlay {
-    position: absolute; inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: none;
-    align-items: center; justify-content: center;
-    z-index: 80;
+.mc-btn:hover:not(:disabled),
+.source-btn:hover:not(:disabled) {
+    background: #8b8b8b;
+    border-top-color: #ffffff;
+    border-left-color: #ffffff;
+    border-bottom-color: #4a4a4a;
+    border-right-color: #4a4a4a;
+    box-shadow: inset 2px 2px 0px #ffffff, inset -2px -2px 0px #555555;
+    color: #ffffa0;
+    text-shadow: 2px 2px 0px #3f3f20;
 }
+
+.mc-btn:active:not(:disabled),
+.source-btn:active:not(:disabled) {
+    border-top-color: #373737;
+    border-left-color: #373737;
+    border-bottom-color: #a0a0a0;
+    border-right-color: #a0a0a0;
+    box-shadow: inset 2px 2px 0px #373737, inset -2px -2px 0px #c6c6c6;
+    color: #ffffa0;
+    padding-top: 12px;
+    padding-bottom: 8px;
+}
+
+.mc-btn:disabled,
+.source-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #888888;
+    text-shadow: 2px 2px 0px #222222;
+}
+
+.mc-btn.accent,
+.mc-btn.primary,
+.source-btn.accent {
+    border-color: #70c070 #205020 #205020 #70c070;
+    color: #ffffff;
+}
+.mc-btn.accent:hover:not(:disabled),
+.mc-btn.primary:hover:not(:disabled) {
+    color: #ffffff;
+    text-shadow: 2px 2px 0px #1b4d1b;
+    background: #609860;
+}
+
+.mc-btn.danger,
+.source-btn.danger {
+    border-color: #c07070 #502020 #502020 #c07070;
+    color: #ffcccc;
+}
+.mc-btn.danger:hover:not(:disabled) {
+    background: #985050;
+    color: #ffffff;
+    text-shadow: 2px 2px 0px #4d1b1b;
+}
+
+.mc-btn-sm {
+    height: 32px;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 8px;
+}
+
+/* Close button */
+.mc-close-btn,
+.source-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: #c6c6c6;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #555555;
+    border-right: 2px solid #555555;
+    color: #373737;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+.mc-close-btn:hover,
+.source-close-btn:hover {
+    background: #d85050;
+    border-top-color: #ff8888;
+    border-left-color: #ff8888;
+    border-bottom-color: #551111;
+    border-right-color: #551111;
+    color: #ffffff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* ==========================================================================
+   MINECRAFT WINDOW / CONTAINER FRAME (.mc-window, .mc-container)
+   ========================================================================== */
+
+.mc-window,
 .mc-container {
     background: #c6c6c6;
-    border: 5px solid;
-    border-color: #ffffff #5b5b5b #5b5b5b #ffffff;
-    padding: 24px;
-    box-shadow: 10px 10px 0px rgba(0,0,0,0.4);
-    display: flex; flex-direction: column; gap: 20px;
+    border-top: 4px solid #ffffff;
+    border-left: 4px solid #ffffff;
+    border-bottom: 4px solid #555555;
+    border-right: 4px solid #555555;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+    color: #373737;
+    padding: 16px;
     position: relative;
 }
+
+.mc-window-header,
 .mc-header {
-    color: #404040;
-    font-size: 12px;
-    font-weight: bold;
-    display: flex; justify-content: space-between;
+    display: flex;
     align-items: center;
-    border-bottom: 4px solid #8b8b8b;
-    padding-bottom: 12px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    color: #404040;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-shadow: none;
+    letter-spacing: 0.05em;
 }
-.mc-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 6px;
-}
-.mc-slot {
-    width: 48px; height: 48px;
+
+/* Minecraft Inset Slots (Inventory, Hotbar, Crafting) */
+.mc-slot,
+.slot {
+    width: 44px;
+    height: 44px;
     background: #8b8b8b;
-    border: 4px solid;
-    border-color: #373737 #ffffff #ffffff #373737;
-    display: flex; align-items: center; justify-content: center;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-bottom: 2px solid #ffffff;
+    border-right: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
     cursor: pointer;
+    user-select: none;
 }
-.mc-slot:hover {
-    background: #bebebe;
-    border-color: #ffffff #373737 #373737 #ffffff;
+
+.mc-slot:hover,
+.slot:hover {
+    background: #a0a0a0;
 }
-.mc-slot canvas {
+
+.mc-slot canvas,
+.slot canvas {
     width: 32px;
     height: 32px;
     pointer-events: none;
 }
-.mc-slot.craft-out {
-    background: #9d9d9d;
-    border-color: #555 #fff #fff #555;
-    width: 60px; height: 60px;
+
+.mc-slot .qty,
+.slot .qty {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    text-shadow: 1px 1px 0px #3f3f3f, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000;
+    pointer-events: none;
+    z-index: 10;
 }
-.mc-crafting-area {
-    display: flex; align-items: center; justify-content: center;
-    gap: 30px; background: rgba(0,0,0,0.15);
-    padding: 20px; border: 4px solid #8b8b8b;
+
+/* ==========================================================================
+   MAIN MENU & ESCAPE SCREEN (#overlay)
+   ========================================================================== */
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    background-image: var(--mc-dirt-pattern);
+    background-blend-mode: multiply;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: default;
+    padding: 20px;
 }
-.mc-craft-grid {
+
+.mc-menu-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 460px;
+    gap: 24px;
+}
+
+/* Giant 3D Minecraft Title Logo */
+.mc-title-box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mc-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(24px, 5vw, 42px);
+    font-weight: 900;
+    color: #dddddd;
+    letter-spacing: 3px;
+    text-align: center;
+    text-shadow: 
+        0 2px 0 #aaaaaa,
+        0 4px 0 #777777,
+        0 6px 0 #555555,
+        0 8px 0 #333333,
+        0 10px 0 #111111,
+        3px 10px 12px rgba(0, 0, 0, 0.9);
+    position: relative;
+    display: inline-block;
+}
+
+/* Bouncing Yellow Splash Text */
+.mc-splash {
+    position: absolute;
+    right: -25px;
+    bottom: -16px;
+    color: #ffff00;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    text-shadow: 2px 2px 0px #3f3f00;
+    transform: rotate(-20deg);
+    animation: mcSplashAnim 0.8s infinite alternate ease-in-out;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+}
+
+@keyframes mcSplashAnim {
+    0% { transform: rotate(-20deg) scale(1); }
+    100% { transform: rotate(-20deg) scale(1.1); }
+}
+
+.mc-subtitle {
+    font-size: 9px;
+    color: #aaaaaa;
+    text-shadow: 1px 1px 0 #000000;
+    margin-top: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+/* Minecraft Button Grid Layout */
+.mc-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.mc-row-2 {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
 }
-.craft-arrow {
-    font-size: 30px; color: #404040;
+
+.mc-footer-version {
+    font-size: 8px;
+    color: #888888;
+    text-shadow: 1px 1px 0 #000;
+    margin-top: 8px;
+}
+
+/* ==========================================================================
+   IN-GAME HUD (CROSSHAIR, HOTBAR, HEARTS, FOOD, XP BAR)
+   ========================================================================== */
+
+/* Crosshair */
+#crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 25;
+}
+#crosshair::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+    background: #ffffff;
+    box-shadow: 0 0 1px #000000;
+}
+#crosshair::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 7px;
+    width: 2px;
+    height: 16px;
+    background: #ffffff;
+    box-shadow: 0 0 1px #000000;
+}
+
+/* Underwater Filter */
+#underwater-tint {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 10, 40, 0.85);
+    pointer-events: none;
+    display: none;
+    z-index: 8;
+}
+
+/* Save Indicator Toast */
+#save-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #c6c6c6;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #555555;
+    border-right: 2px solid #555555;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    color: #222222;
+    padding: 8px 16px;
+    font-size: 9px;
+    font-weight: bold;
+    display: none;
+    z-index: 95;
+    pointer-events: none;
+}
+
+/* Top-Left Quick Actions */
+#hud-quick-actions {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+    z-index: 30;
+    pointer-events: auto;
+}
+
+/* F3 Debug Screen (Classic Minecraft Overlay) */
+#f3-overlay {
+    position: fixed;
+    top: 48px;
+    left: 10px;
+    z-index: 28;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 12px;
+    border-radius: 2px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 8px;
+    line-height: 1.5;
+    color: #ffffff;
+    text-shadow: 1px 1px 0 #000000;
+    max-width: 400px;
+}
+
+/* Bottom Center HUD Container */
+#hud-center-container {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 25;
     user-select: none;
 }
-/* Folgender Cursor beim Tragen von Items */
+
+/* Selected item name popup (fades out) */
+#hotbar-item-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #ffffff;
+    text-shadow: 2px 2px 0px #3f3f3f;
+    margin-bottom: 6px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    white-space: nowrap;
+}
+
+/* Vitals Row (Hearts on Left, Food on Right, Armor above Hearts) */
+#hud-vitals-row {
+    display: flex;
+    justify-content: space-between;
+    width: 396px;
+    margin-bottom: 4px;
+    pointer-events: none;
+}
+
+.mc-hearts-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mc-hearts-strip,
+.mc-armor-strip,
+.mc-hunger-strip {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.mc-heart,
+.mc-armor-icon,
+.mc-hunger-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    image-rendering: pixelated;
+}
+
+/* Experience Bar & Level */
+#hud-xp-container {
+    position: relative;
+    width: 396px;
+    height: 7px;
+    background: #000000;
+    border: 1px solid #1a1a1a;
+    margin-bottom: 4px;
+}
+
+#hud-xp-fill {
+    width: 75%;
+    height: 100%;
+    background: linear-gradient(180deg, #74eb22 0%, #469a12 100%);
+    box-shadow: 0 0 4px #74eb22;
+}
+
+#hud-xp-level {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #80ff20;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 1px 0 #000,
+        0 -1px 0 #000,
+        1px 0 0 #000,
+        -1px 0 0 #000;
+}
+
+/* Crouch Indicator */
+#hud-crouch-tag {
+    position: absolute;
+    left: -80px;
+    top: -18px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #ffff55;
+    padding: 3px 6px;
+    font-size: 7px;
+    border: 1px solid #555555;
+    display: none;
+}
+
+/* Hotbar Frame */
+#hotbar {
+    display: flex;
+    background: #8f8f8f;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #373737;
+    border-right: 2px solid #373737;
+    padding: 2px;
+    gap: 2px;
+    pointer-events: auto;
+    position: relative;
+}
+
+#hotbar .slot {
+    width: 40px;
+    height: 40px;
+    border-radius: 0px;
+}
+
+#hotbar .slot.active {
+    outline: 4px solid #ffffff;
+    outline-offset: -2px;
+    z-index: 5;
+    background: #9c9c9c;
+}
+
+#hotbar .slot::before {
+    content: attr(data-key);
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    font-size: 7px;
+    color: #aaaaaa;
+    font-family: 'Press Start 2P', monospace;
+    pointer-events: none;
+}
+
+/* Chat Console */
+#chat-container {
+    position: fixed;
+    bottom: 80px;
+    left: 14px;
+    width: 380px;
+    max-height: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 35;
+    pointer-events: auto;
+}
+
+#chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 120px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    font-size: 8px;
+    line-height: 1.4;
+    color: #ffffff;
+    text-shadow: 1px 1px 0 #000;
+}
+
+#chat-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #555555;
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 6px 8px;
+    outline: none;
+}
+
+/* ==========================================================================
+   MINECRAFT INVENTORY & CRAFTING OVERLAY (#inventory-overlay)
+   ========================================================================== */
+
+#inventory-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 120;
+    padding: 16px;
+}
+
+.mc-inv-window {
+    width: 480px;
+    max-width: 95vw;
+}
+
+.mc-crafting-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #b5b5b5;
+    border: 2px solid #373737;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
+.mc-player-preview {
+    width: 64px;
+    height: 96px;
+    background: #8b8b8b;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-bottom: 2px solid #ffffff;
+    border-right: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.mc-craft-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 44px);
+    gap: 4px;
+}
+
+.mc-craft-arrow {
+    font-size: 16px;
+    color: #373737;
+    font-weight: bold;
+    user-select: none;
+}
+
+.mc-slot.craft-out {
+    width: 52px;
+    height: 52px;
+    background: #999999;
+}
+
+.mc-inv-label {
+    font-size: 9px;
+    color: #404040;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.mc-inv-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 44px);
+    gap: 3px;
+    justify-content: center;
+}
+
+.mc-hotbar-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 44px);
+    gap: 3px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+/* Floating cursor item */
 #cursor-item {
     position: fixed;
-    width: 36px; height: 36px;
+    width: 36px;
+    height: 36px;
     pointer-events: none;
     z-index: 999;
     display: none;
     transform: translate(-50%, -50%);
 }
-#cursor-item canvas { width: 36px; height: 36px; }
+#cursor-item canvas {
+    width: 36px;
+    height: 36px;
+}
 #cursor-qty {
-    position: absolute; bottom: 0; right: 0;
-    color: white; font-size: 10px; font-weight: bold;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: bold;
     text-shadow: 1px 1px 0 #000;
 }
 
-/* Sunken Inset Slot Style */
-.mc-inset {
-    background: #313131;
-    border: 4px solid;
-    border-color: #1a1a1a #8b8b8b #8b8b8b #1a1a1a;
-    padding: 12px;
-    color: #e0e0e0;
+/* ==========================================================================
+   MINECRAFT OPTIONS & SETTINGS MODAL (#settings-modal)
+   ========================================================================== */
+
+.mc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    background-image: var(--mc-dirt-pattern);
+    background-blend-mode: multiply;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 130;
+    padding: 16px;
 }
 
-/* Minecraft Styled Popups and Panels */
-.mc-panel {
+.mc-options-window {
+    width: 720px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     background: #c6c6c6;
-    border: 5px solid;
-    border-color: #ffffff #5b5b5b #5b5b5b #ffffff;
-    box-shadow: 10px 10px 0px rgba(0,0,0,0.45);
+    border-top: 4px solid #ffffff;
+    border-left: 4px solid #ffffff;
+    border-bottom: 4px solid #555555;
+    border-right: 4px solid #555555;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+}
+
+.mc-options-header {
+    text-align: center;
+    padding: 12px;
+    font-size: 14px;
+    color: #373737;
+    font-weight: bold;
+    border-bottom: 2px solid #8b8b8b;
+}
+
+.mc-options-tabs {
+    display: flex;
+    background: #8b8b8b;
+    border-bottom: 2px solid #555555;
+    padding: 4px 8px 0;
+    gap: 4px;
+    overflow-x: auto;
+}
+
+.mc-tab-btn {
+    padding: 8px 12px;
+    background: #707070;
+    border-top: 2px solid #a0a0a0;
+    border-left: 2px solid #a0a0a0;
+    border-right: 2px solid #373737;
+    border-bottom: none;
+    color: #e0e0e0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.mc-tab-btn:hover {
+    background: #8b8b8b;
+    color: #ffffa0;
+}
+.mc-tab-btn.active {
+    background: #c6c6c6;
+    color: #373737;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-right: 2px solid #555555;
+    padding-bottom: 10px;
+    margin-bottom: -2px;
+    z-index: 2;
+}
+
+.mc-options-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #c6c6c6;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mc-options-footer {
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    border-top: 2px solid #8b8b8b;
+}
+
+/* Keybinds Table in Minecraft style */
+.mc-keybind-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.mc-keybind-table th {
+    text-align: left;
+    padding: 8px;
+    background: #8b8b8b;
+    color: #ffffff;
+    font-size: 8px;
+    border-bottom: 2px solid #373737;
+}
+.mc-keybind-table td {
+    padding: 8px;
+    border-bottom: 1px solid #a0a0a0;
+    font-size: 8px;
+    color: #222222;
+}
+.mc-keybind-table tr:hover td {
+    background: #b5b5b5;
+}
+
+.mc-key-box {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #707070;
+    border-top: 2px solid #a0a0a0;
+    border-left: 2px solid #a0a0a0;
+    border-bottom: 2px solid #373737;
+    border-right: 2px solid #373737;
+    color: #ffffa0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+/* Option Cards */
+.mc-card {
+    background: #b5b5b5;
+    border-top: 2px solid #555555;
+    border-left: 2px solid #555555;
+    border-bottom: 2px solid #ffffff;
+    border-right: 2px solid #ffffff;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mc-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 8px;
+    font-weight: bold;
+    color: #222222;
+}
+
+/* Sliders */
+input[type=range].mc-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #373737;
+    border-top: 2px solid #000000;
+    border-left: 2px solid #000000;
+    border-bottom: 2px solid #555555;
+    border-right: 2px solid #555555;
+    outline: none;
+}
+input[type=range].mc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 24px;
+    background: #707070;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #373737;
+    border-right: 2px solid #373737;
+    cursor: pointer;
+}
+input[type=range].mc-slider::-webkit-slider-thumb:hover {
+    background: #8b8b8b;
+}
+
+/* Input box */
+.mc-input {
+    background: #373737;
+    border-top: 2px solid #000000;
+    border-left: 2px solid #000000;
+    border-bottom: 2px solid #555555;
+    border-right: 2px solid #555555;
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 8px 10px;
+    outline: none;
+}
+
+/* Recipe Book Side Panel */
+#recipe-book-panel {
+    background: #c6c6c6;
+    border-top: 4px solid #ffffff;
+    border-left: 4px solid #ffffff;
+    border-bottom: 4px solid #555555;
+    border-right: 4px solid #555555;
+    padding: 12px;
+    width: 260px;
+}
+.mc-recipe-card {
+    background: #b5b5b5;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #555555;
+    border-right: 2px solid #555555;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.mc-recipe-card:hover {
+    background: #a0a0a0;
+}
+
+/* Liquid Glass Option Enhancement (When toggled on in settings) */
+body.liquid-glass-mode .mc-window,
+body.liquid-glass-mode .mc-options-window,
+body.liquid-glass-mode #hotbar,
+body.liquid-glass-mode #recipe-book-panel {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+    border: var(--glass-border) !important;
+    box-shadow: var(--glass-shadow) !important;
+    color: #ffffff !important;
+}
+body.liquid-glass-mode .mc-window-header,
+body.liquid-glass-mode .mc-header,
+body.liquid-glass-mode .mc-options-header,
+body.liquid-glass-mode .mc-inv-label {
+    color: #ffffff !important;
+    text-shadow: 1px 1px 0 #000 !important;
+}
+body.liquid-glass-mode .mc-slot {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(0, 0, 0, 0.4) rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.4) rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Item hover tooltip */
+.mc-tooltip {
+    position: fixed;
+    background: #100010;
+    border: 2px solid #29007a;
+    box-shadow: 0 0 0 1px #100010;
+    color: #ffffff;
+    padding: 6px 10px;
+    font-size: 9px;
+    font-family: 'Press Start 2P', monospace;
+    z-index: 1000;
+    pointer-events: none;
 }

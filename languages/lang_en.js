@@ -1,6 +1,7 @@
 export const lang = {
     play: "CLICK TO PLAY",
-    langBtn: "SPRACHE / LANGUAGE: EN",
+    langBtn: "LANGUAGE: ENGLISH", // Clean and localized
+    settingsBtn: "SETTINGS",
     saveIndicator: "WORLD SAVED!",
     saveIndicatorFailed: "SAVE FAILED (STORAGE FULL?)",
     hudSystemTitle: "HUD / SYSTEM",
@@ -23,6 +24,23 @@ export const lang = {
     clickToFill: "CLICK: AUTOFILL RECIPE",
     closeMessage: "[X] CLOSE",
 
+    // New Settings Translations
+    fallbackModeActive: "Iframe Sandbox: Click & drag to look around! Press CONFIG or ESC for options.",
+    settingsTitle: "GAME SETTINGS",
+    settingsClose: "CLOSE [X]",
+    volumeSetting: "MASTER VOLUME:",
+    fontSetting: "FONT STYLE:",
+    fontPixel: "RETRO PIXEL",
+    fontSans: "CLEAN MODERN",
+    renderDistSetting: "RENDER DISTANCE:",
+    fogEnabledSetting: "SMOOTH FOG:",
+    fogThicknessSetting: "FOG DENSITY:",
+    leavesSetting: "LEAVES OPACITY:",
+    waterColorSetting: "UNDERWATER TINT:",
+    waterDensitySetting: "WATER DENSITY:",
+    enabled: "ON",
+    disabled: "OFF",
+
     timeDay: "DAY",
     timeSunset: "DUSK",
     timeNight: "NIGHT",
@@ -40,7 +58,10 @@ export const lang = {
         23: "Diamond Pickaxe",
         24: "Wood Sword", 25: "Stone Sword",
         26: "Iron Sword", 27: "Gold Sword",
-        28: "Diamond Sword"
+        28: "Diamond Sword",
+        29: "Snow Block", 30: "Ice Block",
+        31: "Jungle Wood", 32: "Jungle Leaves",
+        33: "Snowy Leaves"
     },
 
     recipePlanksTitle: "WOOD PLANKS (x4)",

@@ -1,6 +1,25 @@
+import { GameSettings } from './settings.js';
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+// Create master gain node to route all sounds through for real-time control
+const masterGain = audioCtx.createGain();
+masterGain.gain.setValueAtTime(GameSettings.volume, audioCtx.currentTime);
+masterGain.connect(audioCtx.destination);
+
 let ambientInitialized = false;
+
+export function updateMasterVolume(val) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    GameSettings.volume = parseFloat(val);
+    GameSettings.save();
+    if (masterGain) {
+        masterGain.gain.setValueAtTime(GameSettings.volume, audioCtx.currentTime);
+    }
+}
+
+export const setAudioVolume = updateMasterVolume;
+export const initAudio = initAmbientSounds;
 
 export function initAmbientSounds() {
     if (ambientInitialized) return;
@@ -47,7 +66,8 @@ export function initAmbientSounds() {
         
         windSource.connect(windFilter);
         windFilter.connect(windGain);
-        windGain.connect(audioCtx.destination);
+        // Connect to masterGain instead of direct destination
+        windGain.connect(masterGain);
         
         windSource.start(0);
         windLFO.start(0);
@@ -107,10 +127,11 @@ function playProceduralMusicTrack() {
             const delayGain = audioCtx.createGain();
             delayGain.gain.value = 0.35;
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            // Connect to masterGain instead of direct destination
+            gain.connect(masterGain);
             gain.connect(delay);
             delay.connect(delayGain);
-            delayGain.connect(audioCtx.destination);
+            delayGain.connect(masterGain);
             delayGain.connect(delay);
             osc.start(noteStart);
             osc.stop(noteStart + duration);
@@ -140,7 +161,8 @@ function playProceduralCricketChirp() {
             gain.gain.linearRampToValueAtTime(0.0, startTime + 0.03);
             
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            // Connect to masterGain instead of direct destination
+            gain.connect(masterGain);
             
             osc.start(startTime);
             osc.stop(startTime + 0.035);
@@ -158,7 +180,8 @@ export function playSound(type) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        // Connect to masterGain instead of direct destination
+        gain.connect(masterGain);
         
         const now = audioCtx.currentTime;
         
@@ -194,6 +217,38 @@ export function playSound(type) {
             gain.gain.linearRampToValueAtTime(0, now + 0.05);
             osc.start(now);
             osc.stop(now + 0.05);
+        } else if (type === 'craft') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.09);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.09);
+            osc.start(now);
+            osc.stop(now + 0.09);
+        } else if (type === 'click' || type === 'ui_click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(900, now);
+            osc.frequency.exponentialRampToValueAtTime(450, now + 0.05);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'ui_hover') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1150, now);
+            osc.frequency.exponentialRampToValueAtTime(1400, now + 0.03);
+            gain.gain.setValueAtTime(0.04, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.03);
+            osc.start(now);
+            osc.stop(now + 0.03);
+        } else if (type === 'crouch') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.exponentialRampToValueAtTime(90, now + 0.08);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.08);
         }
     } catch (e) {
         console.warn("Audio Error: ", e);

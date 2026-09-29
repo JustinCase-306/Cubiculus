@@ -1,6 +1,6 @@
 {
-  "name": "WebMinecraft",
-  "description": "WebMinecraft Survival & Crafting Update. A high-performance 3D voxel builder in the browser.",
+  "name": "BrowserCraft",
+  "description": "High-performance BrowserCraft 3D voxel sandbox with sleek minimalist UI, Liquid Glass mode, crouching mechanic, custom keybinding configuration, GPU shadows, survival crafting, and procedural worlds.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

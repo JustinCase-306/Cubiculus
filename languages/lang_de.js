@@ -1,6 +1,7 @@
 export const lang = {
     play: "KLICKEN ZUM SPIELEN",
-    langBtn: "SPRACHE / LANGUAGE: DE",
+    langBtn: "SPRACHE: DEUTSCH", // Clean and localized
+    settingsBtn: "EINSTELLUNGEN",
     saveIndicator: "SPIELSTAND GESPEICHERT!",
     saveIndicatorFailed: "SPEICHERN FEHLGESCHLAGEN!",
     hudSystemTitle: "HUD / SYSTEM",
@@ -23,6 +24,23 @@ export const lang = {
     clickToFill: "KLICK: AUTOMATISCH FUELLEN",
     closeMessage: "[X] CLOSE",
 
+    // New Settings Translations
+    fallbackModeActive: "Iframe-Sandbox: Ziehe die Maus zum Umsehen! Drücke CONFIG oder ESC für Einstellungen.",
+    settingsTitle: "SPIEL-EINSTELLUNGEN",
+    settingsClose: "SCHLIESSEN [X]",
+    volumeSetting: "LAUTSTAERKE:",
+    fontSetting: "SCHRIFTART:",
+    fontPixel: "RETRO PIXEL",
+    fontSans: "KLASSISCH CLEAN",
+    renderDistSetting: "SICHTWEITE (CHUNKS):",
+    fogEnabledSetting: "SMOOTH NEBEL:",
+    fogThicknessSetting: "NEBEL-DICHTE:",
+    leavesSetting: "LAUB DURCHSICHTIG:",
+    waterColorSetting: "U-WASSER TOENUNG:",
+    waterDensitySetting: "WASSER DICHTE:",
+    enabled: "AN",
+    disabled: "AUS",
+
     timeDay: "TAG",
     timeSunset: "DAEMMERUNG",
     timeNight: "NACHT",
@@ -40,7 +58,10 @@ export const lang = {
         23: "Diamantspitzhacke",
         24: "Holzschwert", 25: "Steinschwert",
         26: "Eisenschwert", 27: "Goldschwert",
-        28: "Diamantschwert"
+        28: "Diamantschwert",
+        29: "Schneeblock", 30: "Eisblock",
+        31: "Tropenholz", 32: "Dschungellaub",
+        33: "Schneelaub"
     },
 
     recipePlanksTitle: "HOLZBRETTER (x4)",
