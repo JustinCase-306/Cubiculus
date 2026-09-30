@@ -1,7 +1,8 @@
 // WebMinecraft Player Physics & Voxel Collision Engine
 import * as THREE from 'three';
 import { BLOCKS, isSolidBlock } from './blocks.js';
-import { getBlock } from './worldGen.js';
+import { getBlock, findSafeSpawn } from './worldGen.js';
+import { GameSettings } from './settings.js';
 
 export const player = {
     pos: new THREE.Vector3(8, 45, 8),
@@ -76,9 +77,11 @@ export function updatePlayerPhysics(dt, moveDir, isJumping, isSprinting, isCrouc
     // Water check
     player.inWater = checkInWater(player.pos);
 
-    // Speed calculation
-    let baseSpeed = 4.3;
-    if (isSprinting && !player.crouching) baseSpeed = 6.6;
+    // Speed calculation (walk/sprint/crouch/swim) from GameSettings
+    const walkSpeed = GameSettings.speed || 4.3;
+    const sprintSpeed = GameSettings.sprintSpeed || 6.6;
+    let baseSpeed = walkSpeed;
+    if (isSprinting && !player.crouching) baseSpeed = sprintSpeed;
     if (player.crouching) baseSpeed = 2.0;
     if (player.inWater) baseSpeed = 2.8;
 
@@ -101,12 +104,14 @@ export function updatePlayerPhysics(dt, moveDir, isJumping, isSprinting, isCrouc
             player.vel.y += (0.2 - player.vel.y) * Math.min(1, dt * 5.0);
         }
     } else {
-        // Airborne gravity
-        player.vel.y -= 26.0 * dt;
+        // Airborne gravity from GameSettings
+        const gravity = GameSettings.gravity || 26.0;
+        player.vel.y -= gravity * dt;
         if (player.vel.y < -40) player.vel.y = -40; // Terminal velocity
 
         if (isJumping && player.grounded) {
-            player.vel.y = player.crouching ? 7.2 : 8.5; // Jump impulse
+            const jumpV = GameSettings.jumpHeight || 8.5;
+            player.vel.y = player.crouching ? jumpV * 0.85 : jumpV; // Jump impulse
             player.grounded = false;
         }
     }
@@ -180,10 +185,15 @@ export function updatePlayerPhysics(dt, moveDir, isJumping, isSprinting, isCrouc
     // Camera smoothing for steps
     player.visualY += (player.pos.y - player.visualY) * Math.min(1, dt * 25.0);
 
-    // Fall safety: respawn if fallen into void
+    // Fall safety: respawn at safe spawn if fallen into void (Bug 17)
     if (player.pos.y < -10) {
-        player.pos.set(8, 45, 8);
+        try {
+            const sp = findSafeSpawn(player.pos.x, player.pos.z);
+            player.pos.set(sp.x, sp.y, sp.z);
+        } catch (e) {
+            player.pos.set(8, 45, 8);
+        }
         player.vel.set(0, 0, 0);
-        player.visualY = 45;
+        player.visualY = player.pos.y;
     }
 }

@@ -203,7 +203,7 @@ export const GameSettings = {
                 if (parsed.pixelUI !== undefined) this.pixelUI = parsed.pixelUI === true || parsed.pixelUI === 'true';
                 if (parsed.renderDistance !== undefined) {
                     const parsedVal = parseInt(parsed.renderDistance, 10);
-                    this.renderDistance = parsedVal < 32 ? 128 : Math.min(128, Math.max(4, parsedVal));
+                    this.renderDistance = (isNaN(parsedVal) || parsedVal < 4) ? 128 : Math.min(128, Math.max(4, parsedVal));
                 } else {
                     this.renderDistance = 128;
                 }

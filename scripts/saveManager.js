@@ -14,7 +14,8 @@ export function getActiveSlotId() {
 
 export function setActiveSlotId(slotId) {
     if (SAVE_SLOTS.includes(slotId)) {
-        localStorage.setItem(ACTIVE_SLOT_KEY, slotId);
+        try { localStorage.setItem(ACTIVE_SLOT_KEY, slotId); }
+        catch (e) { console.error("Could not persist active slot:", e); }
     }
 }
 
@@ -83,11 +84,16 @@ export function saveSlotWorld(slotId, payload) {
         world: worldObj,
         inventory: inventory || null,
         playerPos: playerPos ? { x: playerPos.x, y: playerPos.y, z: playerPos.z } : null,
-        playerRot: playerRot ? { x: playerRot.x, y: playerRot.y } : null,
+        playerRot: playerRot ? { x: playerRot.x, y: playerRot.y, z: playerRot.z ?? 0 } : null,
         seed: seed || 'browsercraft'
     };
 
-    localStorage.setItem(SLOT_PREFIX + slotId, JSON.stringify(saveData));
+    try {
+        localStorage.setItem(SLOT_PREFIX + slotId, JSON.stringify(saveData));
+    } catch (e) {
+        console.error("Save failed (storage full/unavailable):", e);
+        return null;
+    }
     setActiveSlotId(slotId);
     return saveData;
 }
@@ -162,6 +168,11 @@ export function importSlotJSON(slotId, jsonText) {
 function migrateLegacySaveIfNeeded() {
     const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
     const slot1 = localStorage.getItem(SLOT_PREFIX + 'slot_1');
+    // Remove stale legacy blob even when slot_1 already exists (Bug 20)
+    if (legacy && slot1) {
+        try { localStorage.removeItem(LEGACY_SAVE_KEY); }
+        catch (e) {}
+    }
     if (legacy && !slot1) {
         try {
             const parsed = JSON.parse(legacy);

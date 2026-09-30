@@ -224,9 +224,9 @@ export function checkCraftingRecipes() {
     if ((in0 === BLOCKS.WOOD || in0 === BLOCKS.JUNGLE_WOOD || in0 === BLOCKS.BIRCH_WOOD) && in1 === BLOCKS.AIR && in2 === BLOCKS.AIR && in3 === BLOCKS.AIR) {
         out = { type: BLOCKS.PLANKS, count: 4 };
     }
-    // 4 Sand -> 4 Sandstone
+    // 4 Sand -> 1 Sandstone (Minecraft-accurate ratio)
     else if (in0 === BLOCKS.SAND && in1 === BLOCKS.SAND && in2 === BLOCKS.SAND && in3 === BLOCKS.SAND) {
-        out = { type: BLOCKS.SANDSTONE, count: 4 };
+        out = { type: BLOCKS.SANDSTONE, count: 1 };
     }
     // Cobblestone + Leaves -> Mossy Cobblestone
     else if (in0 === (BLOCKS.COBBLESTONE || BLOCKS.STONE) && in1 === BLOCKS.LEAVES && in2 === BLOCKS.AIR && in3 === BLOCKS.AIR) {
@@ -248,8 +248,8 @@ export function checkCraftingRecipes() {
     else if (in0 === BLOCKS.GOLD_ORE && in1 === BLOCKS.AIR && in2 === BLOCKS.AIR && in3 === BLOCKS.AIR) {
         out = { type: BLOCKS.GOLD_INGOT, count: 1 };
     }
-    // 4 Clay/Sand -> 4 Bricks
-    else if (in0 === BLOCKS.DIRT && in1 === BLOCKS.DIRT && in2 === BLOCKS.DIRT && in3 === BLOCKS.DIRT) {
+    // 2 Sand + 2 Dirt -> 4 Bricks (clay substitute, no collision with sandstone)
+    else if (in0 === BLOCKS.SAND && in1 === BLOCKS.SAND && in2 === BLOCKS.DIRT && in3 === BLOCKS.DIRT) {
         out = { type: BLOCKS.BRICK, count: 4 };
     }
     // Pickaxes (top row 2 material, bottom row 1 stick)

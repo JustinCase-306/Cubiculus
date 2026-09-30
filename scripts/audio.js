@@ -1,15 +1,21 @@
 import { GameSettings } from './settings.js';
+import { getWorldTime } from './dayNight.js';
 
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Guarded audio context creation: never crash module load if Web Audio is unavailable
+const AC = window.AudioContext || window.webkitAudioContext;
+const audioCtx = AC ? new AC() : null;
 
 // Create master gain node to route all sounds through for real-time control
-const masterGain = audioCtx.createGain();
-masterGain.gain.setValueAtTime(GameSettings.volume, audioCtx.currentTime);
-masterGain.connect(audioCtx.destination);
+const masterGain = audioCtx ? audioCtx.createGain() : null;
+if (masterGain) {
+    masterGain.gain.setValueAtTime(GameSettings.volume, audioCtx.currentTime);
+    masterGain.connect(audioCtx.destination);
+}
 
 let ambientInitialized = false;
 
 export function updateMasterVolume(val) {
+    if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
     GameSettings.volume = parseFloat(val);
     GameSettings.save();
@@ -22,6 +28,7 @@ export const setAudioVolume = updateMasterVolume;
 export const initAudio = initAmbientSounds;
 
 export function initAmbientSounds() {
+    if (!audioCtx) return;
     if (ambientInitialized) return;
     try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -81,7 +88,9 @@ export function initAmbientSounds() {
 
         setInterval(() => {
             if (document.hidden) return;
-            const isNight = (window.currentEnvStatus === 'NACHT' || window.currentEnvStatus === 'NIGHT');
+            // Night determined by actual world time (worldTime 0.5-1.0 = night)
+            const t = getWorldTime();
+            const isNight = (t > 0.5 && t < 0.95);
             const chance = Math.random();
             if (isNight) {
                 if (chance < 0.45) {
@@ -98,6 +107,7 @@ export function initAmbientSounds() {
 
 let musicPlaying = false;
 function playProceduralMusicTrack() {
+    if (!audioCtx) return;
     if (musicPlaying) return;
     musicPlaying = true;
     try {
@@ -143,6 +153,7 @@ function playProceduralMusicTrack() {
 }
 
 function playProceduralCricketChirp() {
+    if (!audioCtx) return;
     try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const now = audioCtx.currentTime;
@@ -173,6 +184,7 @@ function playProceduralCricketChirp() {
 }
 
 export function playSound(type) {
+    if (!audioCtx) return;
     try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         initAmbientSounds();
@@ -249,6 +261,15 @@ export function playSound(type) {
             gain.gain.linearRampToValueAtTime(0, now + 0.08);
             osc.start(now);
             osc.stop(now + 0.08);
+        } else if (type === 'stone') {
+            // Mining impact tick — short noisy thock
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(240, now);
+            osc.frequency.exponentialRampToValueAtTime(70, now + 0.05);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
         }
     } catch (e) {
         console.warn("Audio Error: ", e);

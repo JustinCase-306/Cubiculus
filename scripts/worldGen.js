@@ -222,34 +222,37 @@ export function getBiome(gx, gz) {
 }
 
 // Multi-octave Fractal Noise with Continentalness & Mountain Ridge Splines
+// Continuous terrain: height is derived from smooth noise, NOT from discrete
+// biome baseH values. This removes harsh vertical cliffs at biome borders.
+function smoothstep(edge0, edge1, x) {
+    const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+    return t * t * (3 - 2 * t);
+}
+
 export function getTerrainHeight(gx, gz, biome) {
     if (!simplex) return 22;
 
-    const cont = simplex.noise2D(gx * 0.0012, gz * 0.0012);
+    const cont = simplex.noise2D(gx * 0.0011, gz * 0.0011);
     const mid = simplex.noise2D(gx * 0.0045, gz * 0.0045);
     const fine = simplex.noise2D(gx * 0.015, gz * 0.015);
+    const ridge = 1.0 - Math.abs(simplex.noise2D(gx * 0.004, gz * 0.004));
 
-    let h = 0;
-    if (biome.name === 'MOUNTAINS') {
-        // Jagged mountain ridges using sharp Billow/Ridge noise
-        const r1 = 1.0 - Math.abs(simplex.noise2D(gx * 0.0045, gz * 0.0045));
-        const r2 = 1.0 - Math.abs(simplex.noise2D(gx * 0.011, gz * 0.011));
-        const ridge = (r1 * r1) * 0.72 + r2 * 0.28;
-        h = 32 + ridge * 28 + mid * 6 + fine * 2.0;
+    // Continuous continental base: low elevations become ocean, high ones rise.
+    let h = 20 + cont * 18;
+
+    // Smooth, continuous mountain boost that ramps in gradually (no cliff).
+    const t = smoothstep(0.10, 0.45, cont);
+    h += t * 34 * (0.35 + ridge * 0.65);
+
+    // Gentle multi-octave undulation so plains are not dead flat.
+    h += mid * 3.2 + fine * 1.6;
+
+    // Mild per-biome material-aware tuning (continuous, small deltas only).
+    if (biome.name === 'SWAMP') {
+        h = Math.min(h, WATER_LEVEL + 1 + mid); // shallow waterlogged flats
     } else if (biome.name === 'BADLANDS') {
-        // Flat-topped stepped mesa plateaus
-        const raw = biome.baseH + cont * 12 + mid * 5 + fine * 1.5;
-        h = (raw > 28) ? Math.floor(raw / 4) * 4 + 2 : raw;
-    } else if (biome.name === 'DESERT') {
-        // Rolling sand dunes
-        const dune = Math.sin(gx * 0.02 + simplex.noise2D(gz * 0.008, gx * 0.008) * 2.2);
-        h = biome.baseH + cont * 4 + dune * 3.5 + fine * 1.2;
-    } else if (biome.name === 'SWAMP') {
-        // Shallow waterlogged flatland
-        h = WATER_LEVEL + 1 + Math.max(-2, mid * 2.2 + fine * 1.0);
-    } else {
-        // Standard rich natural terrain with smooth multi-octave FBM
-        h = biome.baseH + cont * (biome.varH * 0.62) + mid * (biome.varH * 0.38) + fine * 1.5;
+        // Scalloped, stepped mesas but without abrupt edge walls
+        h = h < 27 ? h : Math.floor(h / 3) * 3 + 1;
     }
 
     return Math.max(3, Math.min(CHUNK_HEIGHT - 3, Math.floor(h)));

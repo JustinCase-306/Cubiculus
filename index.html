@@ -22,6 +22,7 @@
     <!-- Screen Filters & Notifications -->
     <div id="underwater-tint"></div>
     <div id="save-indicator">SPIELSTAND GESPEICHERT!</div>
+    <div id="pickup-toast"></div>
 
     <!-- =======================================================================
          MINECRAFT JAVA MAIN MENU & ESCAPE SCREEN
@@ -321,6 +322,15 @@
                                 <span id="cfg-leaves-lbl" class="text-[#205020]">0.85</span>
                             </div>
                             <input type="range" id="cfg-leaves" min="0.2" max="1.0" step="0.05" class="mc-slider" oninput="updateSetting('leavesOpacity', this.value)" />
+                        </div>
+
+                        <!-- Underwater Color -->
+                        <div class="mc-card">
+                            <div class="mc-card-header">
+                                <span>UNTERWASSER-FARBE:</span>
+                                <span id="cfg-underwater-color-lbl" class="text-[#205020]">#000620</span>
+                            </div>
+                            <input type="color" id="cfg-underwater-color" value="#000620" class="h-6 w-12 cursor-pointer bg-transparent border border-[#373737]" onchange="updateSetting('underwaterColor', this.value)" />
                         </div>
 
                         <!-- Pixel UI Mode -->

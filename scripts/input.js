@@ -35,7 +35,8 @@ let inputCallbacks = {
     onDrop: null,
     onHotbarSelect: null,
     onRightClick: null,
-    onEscape: null
+    onEscape: null,
+    onZoom: null
 };
 
 export function initInput(callbacks = {}) {
@@ -148,7 +149,8 @@ function setupInputListeners() {
             return;
         }
 
-        // Movement keys
+        // Movement keys. preventDefault on Ctrl prevents browser shortcuts
+        // like "Ctrl+W" (close tab) / "Ctrl+T" from firing while sprinting.
         if (e.code === kb.forward || e.code === 'KeyW' || e.code === 'ArrowUp') keys.forward = true;
         if (e.code === kb.backward || e.code === 'KeyS' || e.code === 'ArrowDown') keys.backward = true;
         if (e.code === kb.left || e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
@@ -158,7 +160,10 @@ function setupInputListeners() {
             if (!keys.crouch) playSound('crouch');
             keys.crouch = true;
         }
-        if (e.code === kb.sprint || e.code === 'ControlLeft' || e.code === 'ControlRight') keys.sprint = true;
+        if (e.code === kb.sprint || e.code === 'ControlLeft' || e.code === 'ControlRight') {
+            keys.sprint = true;
+            e.preventDefault();
+        }
 
         // Hotbar selection keys (1..9)
         if (e.code.startsWith('Digit')) {
@@ -180,10 +185,15 @@ function setupInputListeners() {
         if (e.code === kb.sprint || e.code === 'ControlLeft' || e.code === 'ControlRight') keys.sprint = false;
     });
 
-    // Mouse wheel hotbar scroll
+    // Mouse wheel: Shift+scroll = zoom, normal scroll = hotbar
     window.addEventListener('wheel', (e) => {
         if (!isGameActive) return;
-        if (inputCallbacks.onWheel) inputCallbacks.onWheel(e.deltaY);
+        if (e.shiftKey) {
+            // Zoom with Shift held
+            if (inputCallbacks.onZoom) inputCallbacks.onZoom(e.deltaY);
+        } else {
+            if (inputCallbacks.onWheel) inputCallbacks.onWheel(e.deltaY);
+        }
     }, { passive: true });
 
     // Mouse Clicks

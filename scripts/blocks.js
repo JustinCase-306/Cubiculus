@@ -42,7 +42,8 @@ export const BLOCKS = {
     CACTUS: 39,
     MOSSY_COBBLESTONE: 40,
     REDSTONE_ORE: 41,
-    EMERALD_ORE: 42
+    EMERALD_ORE: 42,
+    COBBLESTONE: 43
 };
 
 // Which items can be placed in the 3D world as blocks
@@ -74,7 +75,8 @@ export function isPlaceableBlock(type) {
         type === BLOCKS.CACTUS ||
         type === BLOCKS.MOSSY_COBBLESTONE ||
         type === BLOCKS.REDSTONE_ORE ||
-        type === BLOCKS.EMERALD_ORE
+        type === BLOCKS.EMERALD_ORE ||
+        type === BLOCKS.COBBLESTONE
     );
 }
 
@@ -118,6 +120,7 @@ export const breakTimes = {
     [BLOCKS.SANDSTONE]: 1.0,
     [BLOCKS.TERRACOTTA]: 1.3,
     [BLOCKS.MOSSY_COBBLESTONE]: 1.3,
+    [BLOCKS.COBBLESTONE]: 1.2,
     [BLOCKS.COAL_ORE]: 1.3,
     [BLOCKS.IRON_ORE]: 1.5,
     [BLOCKS.REDSTONE_ORE]: 1.5,
@@ -157,6 +160,7 @@ export const blockColors = {
     [BLOCKS.TERRACOTTA]: 0x985e43,
     [BLOCKS.CACTUS]: 0x527d26,
     [BLOCKS.MOSSY_COBBLESTONE]: 0x587352,
+    [BLOCKS.COBBLESTONE]: 0x7f7f7f,
     [BLOCKS.REDSTONE_ORE]: 0xb31414,
     [BLOCKS.EMERALD_ORE]: 0x13c740
 };
@@ -189,6 +193,7 @@ export function getToolMultiplier(heldType, targetBlock) {
         targetBlock === BLOCKS.SANDSTONE ||
         targetBlock === BLOCKS.TERRACOTTA ||
         targetBlock === BLOCKS.MOSSY_COBBLESTONE ||
+        targetBlock === BLOCKS.COBBLESTONE ||
         targetBlock === BLOCKS.REDSTONE_ORE ||
         targetBlock === BLOCKS.EMERALD_ORE
     );
@@ -260,6 +265,7 @@ export const blockNames = {
     [BLOCKS.TERRACOTTA]: "Terrakotta",
     [BLOCKS.CACTUS]: "Kaktus",
     [BLOCKS.MOSSY_COBBLESTONE]: "Bemooster Bruchstein",
+    [BLOCKS.COBBLESTONE]: "Bruchstein",
     [BLOCKS.REDSTONE_ORE]: "Redstone-Erz",
     [BLOCKS.EMERALD_ORE]: "Smaragd-Erz"
 };

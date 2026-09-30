@@ -394,27 +394,35 @@ export function buildChunkMesh(cx, cz) {
                 );
 
                 // Test 6 faces
-                for (let f = 0; f < 6; f++) {
-                    const neighbor = sampleNeighborBlock(x, y, z, f, gx, gz);
+                                for (let f = 0; f < 6; f++) {
+                                                    const neighbor = sampleNeighborBlock(x, y, z, f, gx, gz);
 
-                    // Face culling test
-                    let emitFace = false;
-                    if (neighbor === BLOCKS.AIR) {
-                        emitFace = true;
-                    } else if (isTransparentBlock(neighbor)) {
-                        if (type !== neighbor) {
-                            emitFace = true;
-                        }
-                    }
+                                                    // Face culling test
+                                                    let emitFace = false;
+                                                    if (neighbor === BLOCKS.AIR) {
+                                                        emitFace = true;
+                                                    } else if (isTransparentBlock(neighbor)) {
+                                                        if (type !== neighbor) {
+                                                            emitFace = true;
+                                                        }
+                                                    }
 
-                    if (!emitFace) continue;
+                                                    // Water renders as a flat surface (only the +Y top face),
+                                                    // never as side walls. This removes the water texture from
+                                                    // chunk edges and shorelines in Pixel-style.
+                                                    if (type === BLOCKS.WATER) {
+                                                        if (neighbor === BLOCKS.WATER) emitFace = false; // hidden when above is water
+                                                        if (f !== 2) emitFace = false;                  // only draw the top (+Y) face
+                                                    }
+
+                                                    if (!emitFace) continue;
 
                     // Atlas UV mapping
                     const tileIdx = faces[f];
                     const [u0, v0, u1, v1] = getTileUV(tileIdx);
 
                     // 4-corner Ambient Occlusion
-                    const ao = getFaceAO(x, y, z, gx, gz, f);
+                    const ao = getFaceAO(x, y, z, gx, y, gz, f);
                     const fd = FACE_DIRS[f];
                     const baseLight = fd.light;
                     const corners = FACE_CORNERS[f];
@@ -687,7 +695,10 @@ export function buildLodChunkMesh(cx, cz) {
                 if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE) {
                     nh = topH[(nz << 4) | nx] + 1;
                 } else {
-                    nh = y;
+                    // Off-chunk neighbor: sample its REAL surface height so we don't
+                    // emit a spurious 1-block skirt at every flat chunk border.
+                    const npt = getSurfacePoint(baseGx + nx, baseGz + nz);
+                    nh = npt.y + 1;
                 }
 
                 if (topLevel > nh) {
@@ -858,7 +869,7 @@ export function buildMacroRegionMesh(rx, rz) {
                 sOpaquePos[oPos++] = gx0; sOpaquePos[oPos++] = y00;      sOpaquePos[oPos++] = gz0;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = -1; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0;
-                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -873,7 +884,7 @@ export function buildMacroRegionMesh(rx, rz) {
                 sOpaquePos[oPos++] = gx1; sOpaquePos[oPos++] = y11;      sOpaquePos[oPos++] = gz1;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 1; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0;
-                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -888,7 +899,7 @@ export function buildMacroRegionMesh(rx, rz) {
                 sOpaquePos[oPos++] = gx1; sOpaquePos[oPos++] = y10;      sOpaquePos[oPos++] = gz0;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = -1;
-                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.85; sOpaqueColor[oCol++] = 0.85; sOpaqueColor[oCol++] = 0.85;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -903,7 +914,7 @@ export function buildMacroRegionMesh(rx, rz) {
                 sOpaquePos[oPos++] = gx0; sOpaquePos[oPos++] = y01;      sOpaquePos[oPos++] = gz1;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 1;
-                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.85; sOpaqueColor[oCol++] = 0.85; sOpaqueColor[oCol++] = 0.85;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -1025,7 +1036,7 @@ export function buildMegaRegionMesh(mx, mz) {
                 sOpaquePos[oPos++] = gx0; sOpaquePos[oPos++] = y00; sOpaquePos[oPos++] = gz0;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = -1; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0;
-                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.75; sOpaqueColor[oCol++] = 0.75; sOpaqueColor[oCol++] = 0.75;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -1040,7 +1051,7 @@ export function buildMegaRegionMesh(mx, mz) {
                 sOpaquePos[oPos++] = gx1; sOpaquePos[oPos++] = y11; sOpaquePos[oPos++] = gz1;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 1; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0;
-                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.75; sOpaqueColor[oCol++] = 0.75; sOpaqueColor[oCol++] = 0.75;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -1055,7 +1066,7 @@ export function buildMegaRegionMesh(mx, mz) {
                 sOpaquePos[oPos++] = gx1; sOpaquePos[oPos++] = y10; sOpaquePos[oPos++] = gz0;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = -1;
-                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -1070,7 +1081,7 @@ export function buildMegaRegionMesh(mx, mz) {
                 sOpaquePos[oPos++] = gx0; sOpaquePos[oPos++] = y01; sOpaquePos[oPos++] = gz1;
                 for (let k = 0; k < 4; k++) {
                     sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 0; sOpaqueNorm[oNorm++] = 1;
-                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v0;
+                    sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = (k < 2) ? v0 : v1;
                     sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8; sOpaqueColor[oCol++] = 0.8;
                 }
                 sOpaqueIdx[oIdx++] = sBase + 0; sOpaqueIdx[oIdx++] = sBase + 1; sOpaqueIdx[oIdx++] = sBase + 2;
@@ -1444,9 +1455,10 @@ const particleGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
 
 export function spawnMiningParticles(bx, by, bz, blockType, count = 2) {
     const color = blockColors[blockType] || 0xffffff;
-    const particleMat = new THREE.MeshBasicMaterial({ color: color });
 
     for (let i = 0; i < count; i++) {
+        // Each particle gets its OWN material so it can be disposed independently.
+        const particleMat = new THREE.MeshBasicMaterial({ color: color });
         const pMesh = new THREE.Mesh(particleGeo, particleMat);
         pMesh.position.set(
             bx + 0.15 + Math.random() * 0.7,
@@ -1474,7 +1486,9 @@ export function updateMiningParticles(dt) {
         p.life -= dt;
         if (p.life <= 0) {
             scene.remove(p.mesh);
-            p.mesh.geometry.dispose();
+            // Dispose only the per-particle material. The shared particleGeo
+            // is a module-level singleton and must never be disposed here.
+            if (p.mesh.material) p.mesh.material.dispose();
             miningParticles.splice(i, 1);
         } else {
             p.vel.y -= p.gravity * dt;

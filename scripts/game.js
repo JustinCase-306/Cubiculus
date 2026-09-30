@@ -51,6 +51,12 @@ import { initChat } from './ui/chat.js';
 
 let lastFrameTime = performance.now();
 
+// Camera zoom state (FOV): 75 (default) down to 18 (max zoom-in)
+let currentFov = 75;
+let targetFov = 75;
+export function getZoomLevel() { return targetFov; }
+export function setZoomLevel(fov) { targetFov = Math.max(18, Math.min(75, fov)); }
+
 // Initialize Game Engine on DOM load
 window.addEventListener('DOMContentLoaded', () => {
     initGame();
@@ -130,7 +136,12 @@ function initGame() {
                 updateInventoryUI();
             });
         },
-        onEscape: () => handleGlobalEscape()
+        onEscape: () => handleGlobalEscape(),
+        onZoom: (deltaY) => {
+            // Shift+scroll: zoom the camera by narrowing/widening FOV (75 → 18)
+            const newZoom = getZoomLevel() - Math.sign(deltaY) * 6;
+            setZoomLevel(Math.max(18, Math.min(75, newZoom)));
+        }
     });
 
     // Load active slot save
@@ -326,6 +337,14 @@ function gameLoop(now) {
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
             camera.rotation.x = pitch;
+
+            // Smooth FOV zoom interpolation (Shift+scroll)
+            if (currentFov !== targetFov) {
+                currentFov += (targetFov - currentFov) * Math.min(1, dt * 12);
+                if (Math.abs(targetFov - currentFov) < 0.1) currentFov = targetFov;
+                camera.fov = currentFov;
+                camera.updateProjectionMatrix();
+            }
         }
 
         // 4. Target voxel & mining

@@ -1050,3 +1050,26 @@ body.liquid-glass-mode .mc-slot {
     z-index: 1000;
     pointer-events: none;
 }
+
+
+/* Pickup Toast (collected item popup) */
+#pickup-toast {
+    position: fixed;
+    right: 20px;
+    bottom: 90px;
+    background: rgba(64,64,64,0.92);
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom: 2px solid #333333;
+    border-right: 2px solid #333333;
+    color: #ffffff;
+    padding: 8px 14px;
+    font-size: 9px;
+    font-weight: bold;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 96;
+    pointer-events: none;
+}

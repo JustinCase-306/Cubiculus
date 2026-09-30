@@ -242,9 +242,9 @@ export function setThemeSetting(theme) {
 
 export function setCustomColor(type, hex) {
     if (type === 'accent') {
-        GameSettings.customAccent = hex;
+        GameSettings.customAccentColor = hex;
     } else if (type === 'glow') {
-        GameSettings.customGlow = hex;
+        GameSettings.customGlowColor = hex;
     }
     GameSettings.uiTheme = 'custom';
     applyUITheme('custom');
@@ -274,8 +274,8 @@ export function applyUITheme(theme) {
 
     if (theme === 'custom') {
         document.body.classList.add('theme-custom');
-        document.documentElement.style.setProperty('--theme-accent', GameSettings.customAccent || '#55ff55');
-        document.documentElement.style.setProperty('--theme-glow', GameSettings.customGlow || 'rgba(85, 255, 85, 0.45)');
+        document.documentElement.style.setProperty('--theme-accent', GameSettings.customAccentColor || '#55ff55');
+        document.documentElement.style.setProperty('--theme-glow', GameSettings.customGlowColor || 'rgba(85, 255, 85, 0.45)');
     } else {
         const themeDef = UI_THEMES[theme] || UI_THEMES['emerald'];
         document.body.classList.add(`theme-${theme}`);
@@ -324,8 +324,8 @@ export function syncSettingsDisplay() {
     // Custom pickers
     const customAccent = document.getElementById('cfg-custom-accent');
     const customGlow = document.getElementById('cfg-custom-glow');
-    if (customAccent) customAccent.value = GameSettings.customAccent || '#55ff55';
-    if (customGlow) customGlow.value = GameSettings.customGlow || '#55ff55';
+    if (customAccent) customAccent.value = GameSettings.customAccentColor || '#55ff55';
+    if (customGlow) customGlow.value = GameSettings.customGlowColor || '#55ff55';
 
     // Seed
     const seedLbl = document.getElementById('cfg-active-seed-lbl');
