@@ -24,6 +24,10 @@ export function initInventory() {
     inventory[6] = { type: BLOCKS.GLASS, count: 8 };
     inventory[7] = { type: BLOCKS.SAND, count: 12 };
     inventory[8] = { type: BLOCKS.BRICK, count: 8 };
+
+    // Build the recipe book cards once; they are generated from RECIPE_BOOK so
+    // they always match the crafting patterns.
+    renderRecipeBook();
 }
 
 export function setInventoryData(data) {
@@ -301,24 +305,12 @@ export function autoFillRecipe(recipeKey) {
         }
     }
 
-    const recipePatterns = {
-        planks: [{ slot: 40, type: BLOCKS.WOOD, count: 1 }],
-        stick: [{ slot: 40, type: BLOCKS.PLANKS, count: 1 }, { slot: 42, type: BLOCKS.PLANKS, count: 1 }],
-        glass: [{ slot: 40, type: BLOCKS.SAND, count: 1 }],
-        ironingot: [{ slot: 40, type: BLOCKS.IRON_ORE, count: 1 }],
-        goldingot: [{ slot: 40, type: BLOCKS.GOLD_ORE, count: 1 }],
-        brick: [{ slot: 40, type: BLOCKS.DIRT, count: 1 }, { slot: 41, type: BLOCKS.DIRT, count: 1 }, { slot: 42, type: BLOCKS.DIRT, count: 1 }, { slot: 43, type: BLOCKS.DIRT, count: 1 }],
-        woodpick: [{ slot: 40, type: BLOCKS.PLANKS, count: 1 }, { slot: 41, type: BLOCKS.PLANKS, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        stonepick: [{ slot: 40, type: BLOCKS.STONE, count: 1 }, { slot: 41, type: BLOCKS.STONE, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        ironpick: [{ slot: 40, type: BLOCKS.IRON_INGOT, count: 1 }, { slot: 41, type: BLOCKS.IRON_INGOT, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        goldpick: [{ slot: 40, type: BLOCKS.GOLD_INGOT, count: 1 }, { slot: 41, type: BLOCKS.GOLD_INGOT, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        diamondpick: [{ slot: 40, type: BLOCKS.DIAMOND, count: 1 }, { slot: 41, type: BLOCKS.DIAMOND, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        woodsword: [{ slot: 40, type: BLOCKS.PLANKS, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        stonesword: [{ slot: 40, type: BLOCKS.STONE, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        ironsword: [{ slot: 40, type: BLOCKS.IRON_INGOT, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        goldsword: [{ slot: 40, type: BLOCKS.GOLD_INGOT, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }],
-        diamondsword: [{ slot: 40, type: BLOCKS.DIAMOND, count: 1 }, { slot: 42, type: BLOCKS.STICK, count: 1 }]
-    };
+    // Built from RECIPE_BOOK so the grid can never disagree with the cards.
+    const recipePatterns = {};
+    for (const r of RECIPE_BOOK) {
+        const slots = [40, 41, 42, 43];
+        recipePatterns[r.key] = r.in.map((type, i) => ({ slot: slots[i], type, count: 1 }));
+    }
 
     const pattern = recipePatterns[recipeKey];
     if (!pattern) return;
@@ -577,31 +569,90 @@ export function toggleRecipeBook() {
     }
 }
 
-export function drawRecipeBookCanvases() {
-    try {
-        draw2DIcon(document.getElementById('rec-in-planks'), BLOCKS.WOOD);
-        draw2DIcon(document.getElementById('rec-out-planks'), BLOCKS.PLANKS);
-        draw2DIcon(document.getElementById('rec-out-stick'), BLOCKS.STICK);
-        draw2DIcon(document.getElementById('rec-in-glass'), BLOCKS.SAND);
-        draw2DIcon(document.getElementById('rec-out-glass'), BLOCKS.GLASS);
-        draw2DIcon(document.getElementById('rec-in-ironingot'), BLOCKS.IRON_ORE);
-        draw2DIcon(document.getElementById('rec-out-ironingot'), BLOCKS.IRON_INGOT);
-        draw2DIcon(document.getElementById('rec-in-goldingot'), BLOCKS.GOLD_ORE);
-        draw2DIcon(document.getElementById('rec-out-goldingot'), BLOCKS.GOLD_INGOT);
-        draw2DIcon(document.getElementById('rec-out-brick'), BLOCKS.BRICK);
-        draw2DIcon(document.getElementById('rec-out-woodpick'), BLOCKS.WOOD_PICKAXE);
-        draw2DIcon(document.getElementById('rec-out-stonepick'), BLOCKS.STONE_PICKAXE);
-        draw2DIcon(document.getElementById('rec-out-ironpick'), BLOCKS.IRON_PICKAXE);
-        draw2DIcon(document.getElementById('rec-out-goldpick'), BLOCKS.GOLD_PICKAXE);
-        draw2DIcon(document.getElementById('rec-out-diamondpick'), BLOCKS.DIAMOND_PICKAXE);
-        draw2DIcon(document.getElementById('rec-out-woodsword'), BLOCKS.WOOD_SWORD);
-        draw2DIcon(document.getElementById('rec-out-stonesword'), BLOCKS.STONE_SWORD);
-        draw2DIcon(document.getElementById('rec-out-ironsword'), BLOCKS.IRON_SWORD);
-        draw2DIcon(document.getElementById('rec-out-goldsword'), BLOCKS.GOLD_SWORD);
-        draw2DIcon(document.getElementById('rec-out-diamondsword'), BLOCKS.DIAMOND_SWORD);
-    } catch (e) {
-        console.warn("Recipe canvases skipped:", e);
+
+// Recipe book definition. One entry per recipe, used both to render the cards
+// and to fill the grid, so a card can no longer point at a pattern that does
+// not exist (the old hand-written HTML had two such dead cards).
+const RECIPE_BOOK = [
+    { key: 'planks',      label: 'BRETTER (x4)',    out: BLOCKS.PLANKS,        in: [BLOCKS.WOOD] },
+    { key: 'stick',       label: 'STOCK (x4)',      out: BLOCKS.STICK,         in: [BLOCKS.PLANKS, BLOCKS.PLANKS] },
+    { key: 'glass',       label: 'GLAS (x1)',       out: BLOCKS.GLASS,         in: [BLOCKS.SAND] },
+    { key: 'ironingot',   label: 'EISEN (x1)',      out: BLOCKS.IRON_INGOT,    in: [BLOCKS.IRON_ORE] },
+    { key: 'goldingot',   label: 'GOLD (x1)',       out: BLOCKS.GOLD_INGOT,    in: [BLOCKS.GOLD_ORE] },
+    { key: 'brick',       label: 'ZIEGEL (x4)',     out: BLOCKS.BRICK,         in: [BLOCKS.SAND, BLOCKS.SAND, BLOCKS.DIRT, BLOCKS.DIRT] },
+    { key: 'woodpick',    label: 'HOLZSPITZHACKE',  out: BLOCKS.WOOD_PICKAXE,  in: [BLOCKS.PLANKS, BLOCKS.PLANKS, BLOCKS.STICK] },
+    { key: 'stonepick',   label: 'STEINSPITZHACKE', out: BLOCKS.STONE_PICKAXE, in: [BLOCKS.STONE, BLOCKS.STONE, BLOCKS.STICK] },
+    { key: 'ironpick',    label: 'EISENSPITZHACKE', out: BLOCKS.IRON_PICKAXE,  in: [BLOCKS.IRON_INGOT, BLOCKS.IRON_INGOT, BLOCKS.STICK] },
+    { key: 'goldpick',    label: 'GOLDSPITZHACKE',  out: BLOCKS.GOLD_PICKAXE,  in: [BLOCKS.GOLD_INGOT, BLOCKS.GOLD_INGOT, BLOCKS.STICK] },
+    { key: 'diamondpick', label: 'DIAMANTSPITZHACKE', out: BLOCKS.DIAMOND_PICKAXE, in: [BLOCKS.DIAMOND, BLOCKS.DIAMOND, BLOCKS.STICK] },
+    { key: 'woodsword',   label: 'HOLZSCHWERT',     out: BLOCKS.WOOD_SWORD,    in: [BLOCKS.PLANKS, BLOCKS.PLANKS, BLOCKS.STICK] },
+    { key: 'stonesword',  label: 'STEINSCHWERT',    out: BLOCKS.STONE_SWORD,   in: [BLOCKS.STONE, BLOCKS.STONE, BLOCKS.STICK] },
+    { key: 'ironsword',   label: 'EISENSCHWERT',    out: BLOCKS.IRON_SWORD,    in: [BLOCKS.IRON_INGOT, BLOCKS.STICK] },
+    { key: 'goldsword',   label: 'GOLDSCHWERT',     out: BLOCKS.GOLD_SWORD,    in: [BLOCKS.GOLD_INGOT, BLOCKS.STICK] },
+    { key: 'diamondsword', label: 'DIAMANTSCHWERT', out: BLOCKS.DIAMOND_SWORD, in: [BLOCKS.DIAMOND, BLOCKS.STICK] }
+];
+
+// Builds the recipe book DOM and draws every icon. Called once at boot.
+export function renderRecipeBook() {
+    const list = document.getElementById('recipe-book-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    for (const r of RECIPE_BOOK) {
+        const card = document.createElement('div');
+        card.className = 'mc-recipe-card';
+        card.setAttribute('onclick', 'autoFillRecipe(\'' + r.key + '\')');
+
+        const title = document.createElement('span');
+        title.className = 'text-[8px] font-bold accent-label';
+        title.textContent = r.label;
+
+        const inputs = document.createElement('div');
+        inputs.className = 'flex items-center gap-1 flex-wrap';
+        for (let i = 0; i < r.in.length; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'mc-slot scale-75';
+            slot.style.pointerEvents = 'none';
+            const cv = document.createElement('canvas');
+            cv.id = 'rec-in-' + r.key + '-' + i;
+            cv.width = 16; cv.height = 16;
+            slot.appendChild(cv);
+            inputs.appendChild(slot);
+        }
+
+        const arrow = document.createElement('span');
+        arrow.className = 'text-[10px] font-bold accent-text';
+        arrow.textContent = '>';
+
+        const outSlot = document.createElement('div');
+        outSlot.className = 'mc-slot scale-75';
+        outSlot.style.pointerEvents = 'none';
+        const outCv = document.createElement('canvas');
+        outCv.id = 'rec-out-' + r.key;
+        outCv.width = 16; outCv.height = 16;
+        outSlot.appendChild(outCv);
+
+        const outWrap = document.createElement('div');
+        outWrap.className = 'flex items-center gap-1';
+        outWrap.appendChild(inputs);
+        outWrap.appendChild(arrow);
+        outWrap.appendChild(outSlot);
+
+        card.appendChild(title);
+        card.appendChild(outWrap);
+        list.appendChild(card);
+
+        for (let i = 0; i < r.in.length; i++) {
+            draw2DIcon(document.getElementById('rec-in-' + r.key + '-' + i), r.in[i]);
+        }
+        draw2DIcon(document.getElementById('rec-out-' + r.key), r.out);
     }
+}
+
+export function drawRecipeBookCanvases() {
+    // The cards are built (and their icons drawn) by renderRecipeBook(); calling
+    // it again is cheap and keeps the panel correct if it was re-rendered.
+    renderRecipeBook();
 }
 
 // Track mouse for dragging item & tooltip

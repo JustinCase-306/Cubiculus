@@ -521,38 +521,10 @@
                     <span>REZEPTE</span>
                     <button class="mc-close-btn" onclick="toggleRecipeBook()">X</button>
                 </div>
-                <div class="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-1" style="scrollbar-width: thin;">
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('planks')">
-                        <span class="text-[8px] font-bold text-[#373737]">BRETTER (x4)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-planks"></canvas></div>
+                <div class="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-1" id="recipe-book-list" style="scrollbar-width: thin;">
+                        <!-- Cards are generated from RECIPE_BOOK in inventory.js so they
+                             can never drift out of sync with the crafting patterns. -->
                     </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('stick')">
-                        <span class="text-[8px] font-bold text-[#373737]">STOCK (x4)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-stick"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('glass')">
-                        <span class="text-[8px] font-bold text-[#373737]">GLAS (x1)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-glass"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('ironingot')">
-                        <span class="text-[8px] font-bold text-[#373737]">EISEN (x1)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-ironingot"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('goldingot')">
-                        <span class="text-[8px] font-bold text-[#373737]">GOLD (x1)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-goldingot"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('brick')">
-                        <span class="text-[8px] font-bold text-[#373737]">ZIEGEL (x4)</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-brick"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('diamond_pickaxe')">
-                        <span class="text-[8px] font-bold text-[#373737]">DIAMANT-SPITZHACKE</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-diamondpick"></canvas></div>
-                    </div>
-                    <div class="mc-recipe-card" onclick="autoFillRecipe('diamond_sword')">
-                        <span class="text-[8px] font-bold text-[#373737]">DIAMANT-SCHWERT</span>
-                        <div class="mc-slot scale-75" style="pointer-events: none;"><canvas id="rec-out-diamondsword"></canvas></div>
                     </div>
                 </div>
             </div>

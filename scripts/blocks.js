@@ -1,4 +1,9 @@
 // WebMinecraft Block & Item Definitions
+//
+// Single source of truth: every block carries its own properties instead of
+// being spread across BLOCKS / breakTimes / blockColors / blockNames and two
+// hand-maintained predicate lists. Adding a block is now one entry, and a
+// missing name, colour or break time can no longer silently happen.
 export const BLOCKS = {
     AIR: 0,
     GRASS: 1,
@@ -49,149 +54,115 @@ export const BLOCKS = {
     FLOWER_YELLOW: 46
 };
 
+// layer drives RENDERING only:
+//   solid  - full cube, occludes neighbours
+//   trans  - full cube but see-through (leaves, glass, ice, water)
+//   cross  - two diagonal quads, no collision (plants)
+//   item   - not a world block
+//
+// placeable and solid are separate flags:
+//   placeable - can be put into the world from the hotbar (air/water cannot)
+//   solid     - blocks player movement (items answer true to keep the old
+//               behaviour of the previous isSolidBlock implementation)
+const DEFS = [
+    // id, name, color, breakTime, layer, placeable, solid
+    [BLOCKS.AIR, 'Luft', 0x000000, 0, 'trans', false, false],
+    [BLOCKS.GRASS, 'Grasblock', 0x5c8e32, 0.35, 'solid', true, true],
+    [BLOCKS.DIRT, 'Erde', 0x765438, 0.35, 'solid', true, true],
+    [BLOCKS.STONE, 'Stein', 0x828282, 1.2, 'solid', true, true],
+    [BLOCKS.WOOD, 'Holzstamm', 0x58422E, 0.8, 'solid', true, true],
+    [BLOCKS.SAND, 'Sand', 0xdbca9a, 0.35, 'solid', true, true],
+    [BLOCKS.LEAVES, 'Laub', 0x366822, 0.15, 'trans', true, true],
+    [BLOCKS.WATER, 'Wasser', 0x2e5cff, 0, 'trans', false, false],
+    [BLOCKS.PLANKS, 'Holzbretter', 0xbf945c, 0.6, 'solid', true, true],
+    [BLOCKS.GLASS, 'Glas', 0xffffff, 0.2, 'trans', true, true],
+    [BLOCKS.DIAMOND, 'Diamant-Erz', 0x33e3ff, 2.2, 'solid', true, true],
+    [BLOCKS.BRICK, 'Ziegelstein', 0x934b37, 1.4, 'solid', true, true],
+    [BLOCKS.IRON_ORE, 'Eisenerz', 0xd4a373, 1.5, 'solid', true, true],
+    [BLOCKS.GOLD_ORE, 'Golderz', 0xfad02c, 1.7, 'solid', true, true],
+    [BLOCKS.COAL_ORE, 'Kohleerz', 0x333333, 1.3, 'solid', true, true],
+    [BLOCKS.STICK, 'Stock', 0xa07850, 0, 'item', false, true],
+    [BLOCKS.IRON_INGOT, 'Eisenbarren', 0xd8d8d8, 0, 'item', false, true],
+    [BLOCKS.GOLD_INGOT, 'Goldbarren', 0xfad02c, 0, 'item', false, true],
+    [BLOCKS.COAL, 'Kohle', 0x1a1a1a, 0, 'item', false, true],
+    [BLOCKS.WOOD_PICKAXE, 'Holzspitzhacke', 0xa07850, 0, 'item', false, true],
+    [BLOCKS.STONE_PICKAXE, 'Steinspitzhacke', 0x9a9a9a, 0, 'item', false, true],
+    [BLOCKS.IRON_PICKAXE, 'Eisenspitzhacke', 0xd8d8d8, 0, 'item', false, true],
+    [BLOCKS.GOLD_PICKAXE, 'Goldspitzhacke', 0xfad02c, 0, 'item', false, true],
+    [BLOCKS.DIAMOND_PICKAXE, 'Diamantspitzhacke', 0x33e3ff, 0, 'item', false, true],
+    [BLOCKS.WOOD_SWORD, 'Holzschwert', 0xa07850, 0, 'item', false, true],
+    [BLOCKS.STONE_SWORD, 'Steinschwert', 0x9a9a9a, 0, 'item', false, true],
+    [BLOCKS.IRON_SWORD, 'Eisenschwert', 0xd8d8d8, 0, 'item', false, true],
+    [BLOCKS.GOLD_SWORD, 'Goldschwert', 0xfad02c, 0, 'item', false, true],
+    [BLOCKS.DIAMOND_SWORD, 'Diamantschwert', 0x33e3ff, 0, 'item', false, true],
+    [BLOCKS.SNOW, 'Schnee', 0xf0f5ff, 0.25, 'solid', true, true],
+    [BLOCKS.ICE, 'Eis', 0x99ccff, 0.3, 'trans', true, true],
+    [BLOCKS.JUNGLE_WOOD, 'Dschungelholz', 0x5c4028, 0.8, 'solid', true, true],
+    [BLOCKS.JUNGLE_LEAVES, 'Dschungellaub', 0x256d1b, 0.15, 'trans', true, true],
+    [BLOCKS.SNOW_LEAVES, 'Schneelaub', 0x477853, 0.15, 'trans', true, true],
+    [BLOCKS.BIRCH_WOOD, 'Birkenholz', 0xd8d6cf, 0.8, 'solid', true, true],
+    [BLOCKS.BIRCH_LEAVES, 'Birkenlaub', 0x6ba33b, 0.15, 'trans', true, true],
+    [BLOCKS.SANDSTONE, 'Sandstein', 0xded29b, 1.0, 'solid', true, true],
+    [BLOCKS.GRAVEL, 'Kies', 0x7a7775, 0.35, 'solid', true, true],
+    [BLOCKS.TERRACOTTA, 'Terrakotta', 0x985e43, 1.3, 'solid', true, true],
+    [BLOCKS.CACTUS, 'Kaktus', 0x527d26, 0.25, 'trans', true, true],
+    [BLOCKS.MOSSY_COBBLESTONE, 'Bemooster Bruchstein', 0x587352, 1.3, 'solid', true, true],
+    [BLOCKS.REDSTONE_ORE, 'Redstone-Erz', 0xb31414, 1.5, 'solid', true, true],
+    [BLOCKS.EMERALD_ORE, 'Smaragd-Erz', 0x13c740, 2.0, 'solid', true, true],
+    [BLOCKS.COBBLESTONE, 'Bruchstein', 0x7f7f7f, 1.2, 'solid', true, true],
+    [BLOCKS.TALL_GRASS, 'Grasbusch', 0x5c8e32, 0.05, 'cross', true, false],
+    [BLOCKS.FLOWER_RED, 'Rote Blume', 0xc9405a, 0.05, 'cross', true, false],
+    [BLOCKS.FLOWER_YELLOW, 'Gelbe Blume', 0xe8d44a, 0.05, 'cross', true, false]
+];
+
+// id -> { name, color, breakTime, layer, placeable, solid }
+export const BLOCK_DEFS = {};
+for (const [id, name, color, breakTime, layer, placeable, solid] of DEFS) {
+    BLOCK_DEFS[id] = { id, name, color, breakTime, layer, placeable, solid };
+}
+
+export function getBlockDef(type) {
+    return BLOCK_DEFS[type];
+}
+
+// Back-compat lookup tables, now derived instead of hand-maintained.
+export const blockNames = {};
+export const blockColors = {};
+export const breakTimes = {};
+for (const id in BLOCK_DEFS) {
+    const d = BLOCK_DEFS[id];
+    blockNames[id] = d.name;
+    blockColors[id] = d.color;
+    breakTimes[id] = d.breakTime;
+}
+
+const isLayer = (type, layer) => {
+    const d = BLOCK_DEFS[type];
+    return !!d && d.layer === layer;
+};
+
 // Which items can be placed in the 3D world as blocks
 export function isPlaceableBlock(type) {
-    return (
-        type === BLOCKS.GRASS ||
-        type === BLOCKS.DIRT ||
-        type === BLOCKS.STONE ||
-        type === BLOCKS.WOOD ||
-        type === BLOCKS.SAND ||
-        type === BLOCKS.LEAVES ||
-        type === BLOCKS.PLANKS ||
-        type === BLOCKS.GLASS ||
-        type === BLOCKS.DIAMOND ||
-        type === BLOCKS.BRICK ||
-        type === BLOCKS.IRON_ORE ||
-        type === BLOCKS.GOLD_ORE ||
-        type === BLOCKS.COAL_ORE ||
-        type === BLOCKS.SNOW ||
-        type === BLOCKS.ICE ||
-        type === BLOCKS.JUNGLE_WOOD ||
-        type === BLOCKS.JUNGLE_LEAVES ||
-        type === BLOCKS.SNOW_LEAVES ||
-        type === BLOCKS.BIRCH_WOOD ||
-        type === BLOCKS.BIRCH_LEAVES ||
-        type === BLOCKS.SANDSTONE ||
-        type === BLOCKS.GRAVEL ||
-        type === BLOCKS.TERRACOTTA ||
-        type === BLOCKS.CACTUS ||
-        type === BLOCKS.MOSSY_COBBLESTONE ||
-        type === BLOCKS.REDSTONE_ORE ||
-        type === BLOCKS.EMERALD_ORE ||
-        type === BLOCKS.COBBLESTONE ||
-        type === BLOCKS.TALL_GRASS ||
-        type === BLOCKS.FLOWER_RED ||
-        type === BLOCKS.FLOWER_YELLOW
-    );
+    const d = BLOCK_DEFS[type];
+    return !!d && d.placeable;
 }
 
 // Blocks that let light through or require special face culling
 export function isTransparentBlock(type) {
-    return (
-        type === BLOCKS.AIR ||
-        type === BLOCKS.WATER ||
-        type === BLOCKS.GLASS ||
-        type === BLOCKS.LEAVES ||
-        type === BLOCKS.JUNGLE_LEAVES ||
-        type === BLOCKS.SNOW_LEAVES ||
-        type === BLOCKS.BIRCH_LEAVES ||
-        type === BLOCKS.CACTUS ||
-        type === BLOCKS.ICE ||
-        type === BLOCKS.TALL_GRASS ||
-        type === BLOCKS.FLOWER_RED ||
-        type === BLOCKS.FLOWER_YELLOW
-    );
+    return isLayer(type, 'trans') || isLayer(type, 'cross');
 }
 
 // Blocks rendered as an X of two diagonal quads (tall grass, flowers). They are
 // non-solid: no player collision and no ambient occlusion onto their neighbours.
 export function isCrossShaped(type) {
-    return (
-        type === BLOCKS.TALL_GRASS ||
-        type === BLOCKS.FLOWER_RED ||
-        type === BLOCKS.FLOWER_YELLOW
-    );
+    return isLayer(type, 'cross');
 }
 
 // Blocks that block player movement and occlude other blocks
 export function isSolidBlock(type) {
-    if (type === BLOCKS.AIR || type === BLOCKS.WATER) return false;
-    // Plants must not create a hitbox - you walk straight through flowers.
-    if (isCrossShaped(type)) return false;
-    return true;
+    const d = BLOCK_DEFS[type];
+    return !!d && d.solid;
 }
-
-// Mining break times in seconds
-export const breakTimes = {
-    [BLOCKS.GRASS]: 0.35,
-    [BLOCKS.DIRT]: 0.35,
-    [BLOCKS.SAND]: 0.35,
-    [BLOCKS.GRAVEL]: 0.35,
-    [BLOCKS.SNOW]: 0.25,
-    [BLOCKS.LEAVES]: 0.15,
-    [BLOCKS.JUNGLE_LEAVES]: 0.15,
-    [BLOCKS.SNOW_LEAVES]: 0.15,
-    [BLOCKS.BIRCH_LEAVES]: 0.15,
-    [BLOCKS.CACTUS]: 0.25,
-    [BLOCKS.WOOD]: 0.8,
-    [BLOCKS.JUNGLE_WOOD]: 0.8,
-    [BLOCKS.BIRCH_WOOD]: 0.8,
-    [BLOCKS.PLANKS]: 0.6,
-    [BLOCKS.STONE]: 1.2,
-    [BLOCKS.SANDSTONE]: 1.0,
-    [BLOCKS.TERRACOTTA]: 1.3,
-    [BLOCKS.MOSSY_COBBLESTONE]: 1.3,
-    [BLOCKS.COBBLESTONE]: 1.2,
-    [BLOCKS.COAL_ORE]: 1.3,
-    [BLOCKS.IRON_ORE]: 1.5,
-    [BLOCKS.REDSTONE_ORE]: 1.5,
-    [BLOCKS.BRICK]: 1.4,
-    [BLOCKS.GOLD_ORE]: 1.7,
-    [BLOCKS.EMERALD_ORE]: 2.0,
-    [BLOCKS.DIAMOND]: 2.2,
-    [BLOCKS.GLASS]: 0.2,
-    [BLOCKS.ICE]: 0.3,
-    [BLOCKS.TALL_GRASS]: 0.05,
-    [BLOCKS.FLOWER_RED]: 0.05,
-    [BLOCKS.FLOWER_YELLOW]: 0.05
-};
-
-// Colors for particles and minimaps
-export const blockColors = {
-    [BLOCKS.GRASS]: 0x5c8e32,
-    [BLOCKS.DIRT]: 0x765438,
-    [BLOCKS.STONE]: 0x828282,
-    [BLOCKS.WOOD]: 0x58422E,
-    [BLOCKS.SAND]: 0xdbca9a,
-    [BLOCKS.LEAVES]: 0x366822,
-    [BLOCKS.WATER]: 0x2e5cff,
-    [BLOCKS.PLANKS]: 0xbf945c,
-    [BLOCKS.GLASS]: 0xffffff,
-    [BLOCKS.DIAMOND]: 0x33e3ff,
-    [BLOCKS.BRICK]: 0x934b37,
-    [BLOCKS.IRON_ORE]: 0xd4a373,
-    [BLOCKS.GOLD_ORE]: 0xfad02c,
-    [BLOCKS.COAL_ORE]: 0x333333,
-    [BLOCKS.SNOW]: 0xf0f5ff,
-    [BLOCKS.ICE]: 0x99ccff,
-    [BLOCKS.JUNGLE_WOOD]: 0x5c4028,
-    [BLOCKS.JUNGLE_LEAVES]: 0x256d1b,
-    [BLOCKS.SNOW_LEAVES]: 0x477853,
-    [BLOCKS.BIRCH_WOOD]: 0xd8d6cf,
-    [BLOCKS.BIRCH_LEAVES]: 0x6ba33b,
-    [BLOCKS.SANDSTONE]: 0xded29b,
-    [BLOCKS.GRAVEL]: 0x7a7775,
-    [BLOCKS.TERRACOTTA]: 0x985e43,
-    [BLOCKS.CACTUS]: 0x527d26,
-    [BLOCKS.MOSSY_COBBLESTONE]: 0x587352,
-    [BLOCKS.COBBLESTONE]: 0x7f7f7f,
-    [BLOCKS.REDSTONE_ORE]: 0xb31414,
-    [BLOCKS.EMERALD_ORE]: 0x13c740,
-    [BLOCKS.TALL_GRASS]: 0x5c8e32,
-    [BLOCKS.FLOWER_RED]: 0xc9405a,
-    [BLOCKS.FLOWER_YELLOW]: 0xe8d44a
-};
 
 // Mining speed multiplier depending on the held tool
 export function getToolMultiplier(heldType, targetBlock) {
@@ -251,52 +222,3 @@ export function getToolMultiplier(heldType, targetBlock) {
 
     return 1.0;
 }
-
-export const blockNames = {
-    [BLOCKS.GRASS]: "Grasblock",
-    [BLOCKS.DIRT]: "Erde",
-    [BLOCKS.STONE]: "Stein",
-    [BLOCKS.WOOD]: "Holzstamm",
-    [BLOCKS.SAND]: "Sand",
-    [BLOCKS.LEAVES]: "Laub",
-    [BLOCKS.WATER]: "Wasser",
-    [BLOCKS.PLANKS]: "Holzbretter",
-    [BLOCKS.GLASS]: "Glas",
-    [BLOCKS.DIAMOND]: "Diamant-Erz",
-    [BLOCKS.BRICK]: "Ziegelstein",
-    [BLOCKS.IRON_ORE]: "Eisenerz",
-    [BLOCKS.GOLD_ORE]: "Golderz",
-    [BLOCKS.COAL_ORE]: "Kohleerz",
-    [BLOCKS.STICK]: "Stock",
-    [BLOCKS.IRON_INGOT]: "Eisenbarren",
-    [BLOCKS.GOLD_INGOT]: "Goldbarren",
-    [BLOCKS.COAL]: "Kohle",
-    [BLOCKS.WOOD_PICKAXE]: "Holzspitzhacke",
-    [BLOCKS.STONE_PICKAXE]: "Steinspitzhacke",
-    [BLOCKS.IRON_PICKAXE]: "Eisenspitzhacke",
-    [BLOCKS.GOLD_PICKAXE]: "Goldspitzhacke",
-    [BLOCKS.DIAMOND_PICKAXE]: "Diamantspitzhacke",
-    [BLOCKS.WOOD_SWORD]: "Holzschwert",
-    [BLOCKS.STONE_SWORD]: "Steinschwert",
-    [BLOCKS.IRON_SWORD]: "Eisenschwert",
-    [BLOCKS.GOLD_SWORD]: "Goldschwert",
-    [BLOCKS.DIAMOND_SWORD]: "Diamantschwert",
-    [BLOCKS.SNOW]: "Schnee",
-    [BLOCKS.ICE]: "Eis",
-    [BLOCKS.JUNGLE_WOOD]: "Dschungelholz",
-    [BLOCKS.JUNGLE_LEAVES]: "Dschungellaub",
-    [BLOCKS.SNOW_LEAVES]: "Schneelaub",
-    [BLOCKS.BIRCH_WOOD]: "Birkenholz",
-    [BLOCKS.BIRCH_LEAVES]: "Birkenlaub",
-    [BLOCKS.SANDSTONE]: "Sandstein",
-    [BLOCKS.GRAVEL]: "Kies",
-    [BLOCKS.TERRACOTTA]: "Terrakotta",
-    [BLOCKS.CACTUS]: "Kaktus",
-    [BLOCKS.MOSSY_COBBLESTONE]: "Bemooster Bruchstein",
-    [BLOCKS.COBBLESTONE]: "Bruchstein",
-    [BLOCKS.REDSTONE_ORE]: "Redstone-Erz",
-    [BLOCKS.EMERALD_ORE]: "Smaragd-Erz",
-    [BLOCKS.TALL_GRASS]: "Grasbusch",
-    [BLOCKS.FLOWER_RED]: "Rote Blume",
-    [BLOCKS.FLOWER_YELLOW]: "Gelbe Blume"
-};
