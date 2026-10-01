@@ -26,6 +26,14 @@
     --theme-glow: rgba(85, 255, 85, 0.4);
     --theme-dim: rgba(85, 255, 85, 0.15);
 
+    /* Derived accent tokens - consumed by the component rules below so that
+       switching a theme actually recolours the UI. */
+    --accent-text: #1b4d1b;
+    --accent-surface: #609860;
+    --accent-border-light: #70c070;
+    --accent-border-dark: #205020;
+    --accent-label: #205020;
+
     /* Liquid Glass Variables (Optional Refraction Mode) */
     --glass-blur: 24px;
     --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(20, 20, 20, 0.8) 100%);
@@ -38,41 +46,81 @@ body.theme-amber {
     --theme-accent: #ffaa00;
     --theme-glow: rgba(255, 170, 0, 0.45);
     --theme-dim: rgba(255, 170, 0, 0.18);
+    --accent-text: #7a3d00;
+    --accent-surface: #c8862a;
+    --accent-border-light: #c89540;
+    --accent-border-dark: #3d2000;
+    --accent-label: #5a2f00;
 }
 body.theme-portal {
     --theme-accent: #00d2ff;
     --theme-glow: rgba(0, 210, 255, 0.45);
     --theme-dim: rgba(0, 210, 255, 0.18);
+    --accent-text: #00384d;
+    --accent-surface: #1c9fc4;
+    --accent-border-light: #3fc4e6;
+    --accent-border-dark: #00303f;
+    --accent-label: #00506b;
 }
 body.theme-emerald {
     --theme-accent: #55ff55;
     --theme-glow: rgba(85, 255, 85, 0.45);
     --theme-dim: rgba(85, 255, 85, 0.18);
+    --accent-text: #1b4d1b;
+    --accent-surface: #609860;
+    --accent-border-light: #70c070;
+    --accent-border-dark: #205020;
+    --accent-label: #205020;
 }
 body.theme-amethyst {
     --theme-accent: #c084fc;
     --theme-glow: rgba(192, 132, 252, 0.45);
     --theme-dim: rgba(192, 132, 252, 0.18);
+    --accent-text: #3f1a5e;
+    --accent-surface: #9b63c9;
+    --accent-border-light: #b985e0;
+    --accent-border-dark: #2e1244;
+    --accent-label: #4a2170;
 }
 body.theme-ruby {
     --theme-accent: #ff5555;
     --theme-glow: rgba(255, 85, 85, 0.45);
     --theme-dim: rgba(255, 85, 85, 0.18);
+    --accent-text: #5e1010;
+    --accent-surface: #c94a4a;
+    --accent-border-light: #e06868;
+    --accent-border-dark: #440c0c;
+    --accent-label: #6b1414;
 }
 body.theme-gold {
     --theme-accent: #ffff55;
     --theme-glow: rgba(255, 255, 85, 0.45);
     --theme-dim: rgba(255, 255, 85, 0.18);
+    --accent-text: #5e5a00;
+    --accent-surface: #c9c230;
+    --accent-border-light: #e0dc60;
+    --accent-border-dark: #444000;
+    --accent-label: #565200;
 }
 body.theme-slate {
     --theme-accent: #aaaaaa;
     --theme-glow: rgba(170, 170, 170, 0.45);
     --theme-dim: rgba(170, 170, 170, 0.18);
+    --accent-text: #2f3a44;
+    --accent-surface: #8b9aa6;
+    --accent-border-light: #a8b6c0;
+    --accent-border-dark: #222b33;
+    --accent-label: #38434d;
 }
 body.theme-custom {
     --theme-accent: #55ff55;
     --theme-glow: rgba(85, 255, 85, 0.45);
     --theme-dim: rgba(85, 255, 85, 0.18);
+    --accent-text: #1b4d1b;
+    --accent-surface: #609860;
+    --accent-border-light: #70c070;
+    --accent-border-dark: #205020;
+    --accent-label: #205020;
 }
 
 /* Base resets & typography */
@@ -162,14 +210,26 @@ body {
 .mc-btn.accent,
 .mc-btn.primary,
 .source-btn.accent {
-    border-color: #70c070 #205020 #205020 #70c070;
+    border-color: var(--accent-border-light) var(--accent-border-dark) var(--accent-border-dark) var(--accent-border-light);
     color: #ffffff;
 }
 .mc-btn.accent:hover:not(:disabled),
 .mc-btn.primary:hover:not(:disabled) {
     color: #ffffff;
-    text-shadow: 2px 2px 0px #1b4d1b;
-    background: #609860;
+    text-shadow: 2px 2px 0px var(--accent-text);
+    background: var(--accent-surface);
+}
+
+/* Theme-aware accent helpers: replace hardcoded accent colours in markup. */
+.accent-text {
+    color: var(--theme-accent);
+}
+.accent-label {
+    color: var(--accent-label);
+}
+.accent-glow {
+    text-shadow: 0 0 8px var(--theme-glow);
+    color: var(--theme-accent);
 }
 
 .mc-btn.danger,

@@ -50,6 +50,15 @@ export function setIsGameActive(active) {
 }
 
 export function requestGameLock() {
+    // Close any modal that might still be open so we do not grab the pointer
+    // while a menu is covering the screen.
+    for (const id of ['settings-modal', 'saves-modal', 'confirm-modal']) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    }
+    const invOverlay = document.getElementById('inventory-overlay');
+    if (invOverlay) invOverlay.style.display = 'none';
+
     const overlay = document.getElementById('overlay');
     if (overlay) overlay.style.display = 'none';
 
@@ -69,6 +78,18 @@ export function requestGameLock() {
 }
 
 function setupPointerLock() {
+    // Clicking the pause overlay resumes the game. Without this you had to hit
+    // the specific "back to game" button, and clicking anywhere else did nothing.
+    document.addEventListener('mousedown', (e) => {
+        const overlay = document.getElementById('overlay');
+        if (!overlay || overlay.style.display === 'none' || !overlay.contains(e.target)) return;
+        // Let the menu buttons handle their own clicks.
+        if (e.target.closest('button') || e.target.closest('input') ||
+            e.target.closest('.mc-tab-btn')) return;
+        e.preventDefault();
+        requestGameLock();
+    });
+
     document.addEventListener('pointerlockchange', () => {
         isPointerLocked = (document.pointerLockElement === document.body);
         if (!isPointerLocked) {

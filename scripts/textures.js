@@ -6,7 +6,14 @@ import { BLOCKS } from './blocks.js';
 export const TILE_SIZE = 16;
 export const ATLAS_COLS = 8;
 export const ATLAS_ROWS = 8;
-export const ATLAS_SIZE = 128; // 8 * 16 = 128px
+
+// Mipmapped atlas: every tile sits in a cell with a 1px replicated border, so
+// lower mip levels bleed into that padding rather than into the next tile.
+export const ATLAS_PAD = 1;
+export const ATLAS_CELL = TILE_SIZE + ATLAS_PAD * 2;
+// Canvas edge: ATLAS_COLS * ATLAS_CELL. A 1px pad on every side makes each
+// cell 18px, so the atlas is 144px rather than 128px.
+export const ATLAS_SIZE = ATLAS_COLS * ATLAS_CELL;
 
 // Tile indices inside the atlas grid
 export const TILES = {
@@ -44,7 +51,10 @@ export const TILES = {
     CACTUS_TOP: 31,
     MOSSY_COBBLESTONE: 32,
     REDSTONE_ORE: 33,
-    EMERALD_ORE: 34
+    EMERALD_ORE: 34,
+    TALL_GRASS: 35,
+    FLOWER_RED: 36,
+    FLOWER_YELLOW: 37
 };
 
 // Map each block type to its face tile indices: [right(+X), left(-X), top(+Y), bottom(-Y), front(+Z), back(-Z)]
@@ -77,7 +87,10 @@ export const BLOCK_FACES = {
     [BLOCKS.MOSSY_COBBLESTONE]: [TILES.MOSSY_COBBLESTONE, TILES.MOSSY_COBBLESTONE, TILES.MOSSY_COBBLESTONE, TILES.MOSSY_COBBLESTONE, TILES.MOSSY_COBBLESTONE, TILES.MOSSY_COBBLESTONE],
     [BLOCKS.COBBLESTONE]: [TILES.COBBLESTONE, TILES.COBBLESTONE, TILES.COBBLESTONE, TILES.COBBLESTONE, TILES.COBBLESTONE, TILES.COBBLESTONE],
     [BLOCKS.REDSTONE_ORE]: [TILES.REDSTONE_ORE, TILES.REDSTONE_ORE, TILES.REDSTONE_ORE, TILES.REDSTONE_ORE, TILES.REDSTONE_ORE, TILES.REDSTONE_ORE],
-    [BLOCKS.EMERALD_ORE]: [TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE]
+    [BLOCKS.EMERALD_ORE]: [TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE, TILES.EMERALD_ORE],
+    [BLOCKS.TALL_GRASS]: [TILES.TALL_GRASS, TILES.TALL_GRASS, TILES.TALL_GRASS, TILES.TALL_GRASS, TILES.TALL_GRASS, TILES.TALL_GRASS],
+    [BLOCKS.FLOWER_RED]: [TILES.FLOWER_RED, TILES.FLOWER_RED, TILES.FLOWER_RED, TILES.FLOWER_RED, TILES.FLOWER_RED, TILES.FLOWER_RED],
+    [BLOCKS.FLOWER_YELLOW]: [TILES.FLOWER_YELLOW, TILES.FLOWER_YELLOW, TILES.FLOWER_YELLOW, TILES.FLOWER_YELLOW, TILES.FLOWER_YELLOW, TILES.FLOWER_YELLOW]
 };
 
 // Seeded pseudorandom for deterministic crisp pixel art
@@ -658,6 +671,71 @@ function renderTileToCanvas(ctx, tileIndex, ox, oy) {
                     break;
                 }
 
+                case TILES.TALL_GRASS: {
+                    // Dense tuft of blades filling the lower two thirds. Alpha is
+                    // either 0 or >= 0.15 so the material alphaTest cuts the gaps
+                    // cleanly instead of blending a dark halo around each blade.
+                    const blade = (
+                        (px >= 2 && px <= 3) || (px >= 5 && px <= 7) ||
+                        (px >= 8 && px <= 10) || (px >= 12 && px <= 13)
+                    ) && !(py < 2 && (px === 7 || px === 8));
+                    if (!blade) {
+                        r = 120; g = 168; b = 70; a = 0;
+                        break;
+                    }
+                    // Taller in the middle, shorter at the edges -> bushy silhouette.
+                    const edge = Math.min(px, 15 - px);
+                    const shade = ((px * 7 + py * 13) % 10) / 10 + (edge < 3 ? 0.25 : 0);
+                    if (shade < 0.4) { r = 74; g = 132; b = 44; }
+                    else if (shade < 0.75) { r = 96; g = 160; b = 56; }
+                    else { r = 122; g = 190; b = 74; }
+                    break;
+                }
+
+                case TILES.FLOWER_RED: {
+                    // Red poppy: a full bloom head over a sturdy stem.
+                    const stem = (px >= 7 && px <= 8 && py >= 7 && py <= 15);
+                    const leaf = ((px >= 4 && px <= 6 && py >= 9 && py <= 10) ||
+                                  (px >= 9 && px <= 11 && py >= 11 && py <= 12));
+                    const petal = (
+                        (py >= 2 && py <= 4 && px >= 5 && px <= 10) ||
+                        (py >= 5 && py <= 7 && px >= 3 && px <= 12) ||
+                        (py >= 3 && py <= 6 && px >= 6 && px <= 9)
+                    );
+                    if (petal) {
+                        if (px === 7 && py === 6) { r = 74; g = 24; b = 30; }
+                        else if (px >= 6 && px <= 9 && py >= 5 && py <= 7) { r = 244; g = 86; b = 96; }
+                        else { r = 206; g = 48; b = 62; }
+                    } else if (stem || leaf) {
+                        r = 86; g = 150; b = 52;
+                    } else {
+                        r = 120; g = 168; b = 70; a = 0;
+                    }
+                    break;
+                }
+
+                case TILES.FLOWER_YELLOW: {
+                    // Yellow dandelion with a round, full flower head.
+                    const stem = (px >= 7 && px <= 8 && py >= 7 && py <= 15);
+                    const leaf = ((px >= 9 && px <= 11 && py >= 9 && py <= 10) ||
+                                  (px >= 4 && px <= 6 && py >= 12 && py <= 13));
+                    const bloom = (
+                        (py >= 2 && py <= 4 && px >= 5 && px <= 10) ||
+                        (py >= 5 && py <= 7 && px >= 4 && px <= 11) ||
+                        (py >= 3 && py <= 6 && px >= 6 && px <= 9)
+                    );
+                    if (bloom) {
+                        if (px === 7 && py === 6) { r = 168; g = 128; b = 24; }
+                        else if (px >= 6 && px <= 9 && py >= 5 && py <= 7) { r = 252; g = 226; b = 96; }
+                        else { r = 226; g = 192; b = 56; }
+                    } else if (stem || leaf) {
+                        r = 90; g = 156; b = 54;
+                    } else {
+                        r = 120; g = 168; b = 70; a = 0;
+                    }
+                    break;
+                }
+
                 default: {
                     r = 128; g = 128; b = 128;
                 }
@@ -707,7 +785,10 @@ export const TILE_META = [
     { id: TILES.CACTUS_TOP, name: 'Kaktus Oben', file: 'cactus_top.png' },
     { id: TILES.MOSSY_COBBLESTONE, name: 'Bemooster Bruchstein', file: 'mossy_cobblestone.png' },
     { id: TILES.REDSTONE_ORE, name: 'Redstone-Erz', file: 'redstone_ore.png' },
-    { id: TILES.EMERALD_ORE, name: 'Smaragd-Erz', file: 'emerald_ore.png' }
+    { id: TILES.EMERALD_ORE, name: 'Smaragd-Erz', file: 'emerald_ore.png' },
+    { id: TILES.TALL_GRASS, name: 'Grasbusch', file: 'tall_grass.png' },
+    { id: TILES.FLOWER_RED, name: 'Rote Blume', file: 'flower_red.png' },
+    { id: TILES.FLOWER_YELLOW, name: 'Gelbe Blume', file: 'flower_yellow.png' }
 ];
 
 export function getAtlasCanvas() {
@@ -728,15 +809,28 @@ export function getAtlasTexture() {
     for (let i = 0; i < totalTiles; i++) {
         const col = i % ATLAS_COLS;
         const row = Math.floor(i / ATLAS_COLS);
-        const ox = col * TILE_SIZE;
-        const oy = row * TILE_SIZE;
-        renderTileToCanvas(ctx, i, ox, oy);
+        const ox = col * ATLAS_CELL;
+        const oy = row * ATLAS_CELL;
+        renderTileToCanvas(ctx, i, ox + ATLAS_PAD, oy + ATLAS_PAD);
+        // Repeat the 1px border outwards so mip levels blend into the padding
+        // instead of into the neighbouring tile.
+        ctx.drawImage(atlasCanvas, ox + ATLAS_PAD, oy + ATLAS_PAD, TILE_SIZE, 1,
+            ox, oy + ATLAS_PAD, TILE_SIZE, 1);
+        ctx.drawImage(atlasCanvas, ox + ATLAS_PAD, oy + ATLAS_PAD + TILE_SIZE - 1, TILE_SIZE, 1,
+            ox, oy + ATLAS_PAD + TILE_SIZE - 1, TILE_SIZE, 1);
+        ctx.drawImage(atlasCanvas, ox + ATLAS_PAD, oy + ATLAS_PAD, 1, TILE_SIZE,
+            ox, oy, 1, TILE_SIZE);
+        ctx.drawImage(atlasCanvas, ox + ATLAS_PAD + TILE_SIZE - 1, oy + ATLAS_PAD, 1, TILE_SIZE,
+            ox + ATLAS_PAD + TILE_SIZE - 1, oy, 1, TILE_SIZE);
     }
 
     atlasTexture = new THREE.CanvasTexture(atlasCanvas);
     atlasTexture.magFilter = THREE.NearestFilter;
-    atlasTexture.minFilter = THREE.NearestFilter;
-    atlasTexture.generateMipmaps = false;
+    // Mipmaps + trilinear filtering: without this the far terrain shimmers with
+    // moire stripes because the GPU point-samples across many tiles.
+    atlasTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    atlasTexture.generateMipmaps = true;
+    atlasTexture.anisotropy = 4;
 
     // 2. Load authentic PNG textures asynchronously
     loadAllPNGTextures();
@@ -753,8 +847,8 @@ export function loadAllPNGTextures() {
         const tileIdx = item.id;
         const col = tileIdx % ATLAS_COLS;
         const row = Math.floor(tileIdx / ATLAS_COLS);
-        const ox = col * TILE_SIZE;
-        const oy = row * TILE_SIZE;
+        const ox = col * ATLAS_CELL + ATLAS_PAD;
+        const oy = row * ATLAS_CELL + ATLAS_PAD;
 
         // Check for user-uploaded custom PNG first
         const customData = localStorage.getItem('webmc_custom_png_' + tileIdx);
@@ -792,8 +886,8 @@ export function uploadCustomPNG(tileIdx, dataUrl) {
     const ctx = atlasCanvas.getContext('2d');
     const col = tileIdx % ATLAS_COLS;
     const row = Math.floor(tileIdx / ATLAS_COLS);
-    const ox = col * TILE_SIZE;
-    const oy = row * TILE_SIZE;
+    const ox = col * ATLAS_CELL + ATLAS_PAD;
+    const oy = row * ATLAS_CELL + ATLAS_PAD;
 
     const img = new Image();
     img.onload = () => {
@@ -822,8 +916,8 @@ export function resetTexturesToDefault() {
         for (let i = 0; i < totalTiles; i++) {
             const col = i % ATLAS_COLS;
             const row = Math.floor(i / ATLAS_COLS);
-            const ox = col * TILE_SIZE;
-            const oy = row * TILE_SIZE;
+            const ox = col * ATLAS_CELL + ATLAS_PAD;
+            const oy = row * ATLAS_CELL + ATLAS_PAD;
             renderTileToCanvas(ctx, i, ox, oy);
         }
         loadAllPNGTextures();
@@ -836,16 +930,30 @@ export function resetTexturesToDefault() {
 export function getTileUV(tileIndex) {
     const col = tileIndex % ATLAS_COLS;
     const row = Math.floor(tileIndex / ATLAS_COLS);
-    
-    // UV space: u in [0, 1], v in [0, 1] with v=0 at bottom in WebGL
-    const u0 = col / ATLAS_COLS;
-    const u1 = (col + 1) / ATLAS_COLS;
-    
-    // In canvas (0,0) is top-left; in Three.js texture coordinate v=1 is top, v=0 is bottom
-    const v1 = 1.0 - (row / ATLAS_ROWS);
-    const v0 = 1.0 - ((row + 1) / ATLAS_ROWS);
 
-    return [u0, v0, u1, v1];
+    // The atlas canvas is ATLAS_CELL pixels per cell, not TILE_SIZE.
+    const cellPx = ATLAS_COLS * ATLAS_CELL;
+    const rowPx = ATLAS_ROWS * ATLAS_CELL;
+
+    // Art occupies the inner TILE_SIZE of the cell; the padding is excluded so
+    // only real texture pixels are sampled.
+    const u0 = (col * ATLAS_CELL + ATLAS_PAD) / cellPx;
+    const u1 = (col * ATLAS_CELL + ATLAS_PAD + TILE_SIZE) / cellPx;
+
+    // Canvas y grows downward, texture v grows upward.
+    const v1 = 1.0 - ((row * ATLAS_CELL + ATLAS_PAD) / rowPx);
+    const v0 = 1.0 - ((row * ATLAS_CELL + ATLAS_PAD + TILE_SIZE) / rowPx);
+
+    // Inset by half a texel so we sample texel CENTRES, never the tile border.
+    const texelU = 1.0 / cellPx;
+    const texelV = 1.0 / rowPx;
+
+    return [
+        u0 + texelU * 0.5,
+        v0 + texelV * 0.5,
+        u1 - texelU * 0.5,
+        v1 - texelV * 0.5
+    ];
 }
 
 // Get the master materials for chunk rendering
@@ -960,7 +1068,7 @@ export function draw2DIcon(canvas, blockType) {
         const col = tileIndex % ATLAS_COLS;
         const row = Math.floor(tileIndex / ATLAS_COLS);
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(atlasCanvas, col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE, 0, 0, 16, 16);
+        ctx.drawImage(atlasCanvas, col * ATLAS_CELL + ATLAS_PAD, row * ATLAS_CELL + ATLAS_PAD, TILE_SIZE, TILE_SIZE, 0, 0, 16, 16);
     } else {
         renderTileToCanvas(ctx, tileIndex, 0, 0);
     }

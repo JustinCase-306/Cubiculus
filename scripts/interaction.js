@@ -191,9 +191,17 @@ function breakBlock(target, scene, crackingMesh) {
     let dropCount = 1;
     if (minedBlock === BLOCKS.COAL_ORE) dropType = BLOCKS.COAL;
     else if (minedBlock === BLOCKS.GRASS) dropType = BLOCKS.DIRT;
-    else if (minedBlock === BLOCKS.DIAMOND_ORE) dropType = BLOCKS.DIAMOND;
-    else if (minedBlock === BLOCKS.LEAVES || minedBlock === BLOCKS.JUNGLE_LEAVES || minedBlock === BLOCKS.SNOW_LEAVES) {
+    // The diamond block is BLOCKS.DIAMOND; the old BLOCKS.DIAMOND_ORE did not
+    // exist, so diamonds never dropped anything.
+    else if (minedBlock === BLOCKS.DIAMOND) dropType = BLOCKS.DIAMOND;
+    else if (minedBlock === BLOCKS.LEAVES || minedBlock === BLOCKS.JUNGLE_LEAVES ||
+             minedBlock === BLOCKS.SNOW_LEAVES || minedBlock === BLOCKS.BIRCH_LEAVES) {
         dropType = (Math.random() < 0.25) ? BLOCKS.STICK : BLOCKS.AIR;
+    }
+    else if (minedBlock === BLOCKS.TALL_GRASS || minedBlock === BLOCKS.FLOWER_RED ||
+             minedBlock === BLOCKS.FLOWER_YELLOW) {
+        // Grass and flowers rarely give anything back: 20% chance, nothing else.
+        dropType = (Math.random() < 0.20) ? minedBlock : BLOCKS.AIR;
     }
 
     if (dropType !== BLOCKS.AIR) {

@@ -47,6 +47,9 @@ export function getHeldItem() {
     return item && item.count > 0 ? item : { type: BLOCKS.AIR, count: 0 };
 }
 
+// Returns the number of items actually inserted (0 if the inventory was full).
+// Callers that retry per frame must use this to avoid inserting the same stack
+// repeatedly and duplicating items.
 export function addItemToInventory(type, count = 1) {
     let remaining = count;
 
@@ -73,7 +76,7 @@ export function addItemToInventory(type, count = 1) {
     }
 
     updateInventoryUI();
-    return remaining <= 0;
+    return count - Math.max(remaining, 0);
 }
 
 // Left click slot handler

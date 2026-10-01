@@ -43,7 +43,10 @@ export const BLOCKS = {
     MOSSY_COBBLESTONE: 40,
     REDSTONE_ORE: 41,
     EMERALD_ORE: 42,
-    COBBLESTONE: 43
+    COBBLESTONE: 43,
+    TALL_GRASS: 44,
+    FLOWER_RED: 45,
+    FLOWER_YELLOW: 46
 };
 
 // Which items can be placed in the 3D world as blocks
@@ -76,7 +79,10 @@ export function isPlaceableBlock(type) {
         type === BLOCKS.MOSSY_COBBLESTONE ||
         type === BLOCKS.REDSTONE_ORE ||
         type === BLOCKS.EMERALD_ORE ||
-        type === BLOCKS.COBBLESTONE
+        type === BLOCKS.COBBLESTONE ||
+        type === BLOCKS.TALL_GRASS ||
+        type === BLOCKS.FLOWER_RED ||
+        type === BLOCKS.FLOWER_YELLOW
     );
 }
 
@@ -91,13 +97,29 @@ export function isTransparentBlock(type) {
         type === BLOCKS.SNOW_LEAVES ||
         type === BLOCKS.BIRCH_LEAVES ||
         type === BLOCKS.CACTUS ||
-        type === BLOCKS.ICE
+        type === BLOCKS.ICE ||
+        type === BLOCKS.TALL_GRASS ||
+        type === BLOCKS.FLOWER_RED ||
+        type === BLOCKS.FLOWER_YELLOW
+    );
+}
+
+// Blocks rendered as an X of two diagonal quads (tall grass, flowers). They are
+// non-solid: no player collision and no ambient occlusion onto their neighbours.
+export function isCrossShaped(type) {
+    return (
+        type === BLOCKS.TALL_GRASS ||
+        type === BLOCKS.FLOWER_RED ||
+        type === BLOCKS.FLOWER_YELLOW
     );
 }
 
 // Blocks that block player movement and occlude other blocks
 export function isSolidBlock(type) {
-    return type !== BLOCKS.AIR && type !== BLOCKS.WATER;
+    if (type === BLOCKS.AIR || type === BLOCKS.WATER) return false;
+    // Plants must not create a hitbox - you walk straight through flowers.
+    if (isCrossShaped(type)) return false;
+    return true;
 }
 
 // Mining break times in seconds
@@ -129,7 +151,10 @@ export const breakTimes = {
     [BLOCKS.EMERALD_ORE]: 2.0,
     [BLOCKS.DIAMOND]: 2.2,
     [BLOCKS.GLASS]: 0.2,
-    [BLOCKS.ICE]: 0.3
+    [BLOCKS.ICE]: 0.3,
+    [BLOCKS.TALL_GRASS]: 0.05,
+    [BLOCKS.FLOWER_RED]: 0.05,
+    [BLOCKS.FLOWER_YELLOW]: 0.05
 };
 
 // Colors for particles and minimaps
@@ -162,7 +187,10 @@ export const blockColors = {
     [BLOCKS.MOSSY_COBBLESTONE]: 0x587352,
     [BLOCKS.COBBLESTONE]: 0x7f7f7f,
     [BLOCKS.REDSTONE_ORE]: 0xb31414,
-    [BLOCKS.EMERALD_ORE]: 0x13c740
+    [BLOCKS.EMERALD_ORE]: 0x13c740,
+    [BLOCKS.TALL_GRASS]: 0x5c8e32,
+    [BLOCKS.FLOWER_RED]: 0xc9405a,
+    [BLOCKS.FLOWER_YELLOW]: 0xe8d44a
 };
 
 // Mining speed multiplier depending on the held tool
@@ -267,5 +295,8 @@ export const blockNames = {
     [BLOCKS.MOSSY_COBBLESTONE]: "Bemooster Bruchstein",
     [BLOCKS.COBBLESTONE]: "Bruchstein",
     [BLOCKS.REDSTONE_ORE]: "Redstone-Erz",
-    [BLOCKS.EMERALD_ORE]: "Smaragd-Erz"
+    [BLOCKS.EMERALD_ORE]: "Smaragd-Erz",
+    [BLOCKS.TALL_GRASS]: "Grasbusch",
+    [BLOCKS.FLOWER_RED]: "Rote Blume",
+    [BLOCKS.FLOWER_YELLOW]: "Gelbe Blume"
 };

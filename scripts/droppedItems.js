@@ -28,6 +28,9 @@ export function spawnDroppedItem(scene, type, count = 1, position, initialVel = 
     // Check if it's a flat tool / item (Stick, Ingot, Pickaxe, Sword, Coal)
     const isFlatItem = (
         type === BLOCKS.STICK ||
+        type === BLOCKS.TALL_GRASS ||
+        type === BLOCKS.FLOWER_RED ||
+        type === BLOCKS.FLOWER_YELLOW ||
         type === BLOCKS.IRON_INGOT ||
         type === BLOCKS.GOLD_INGOT ||
         type === BLOCKS.COAL ||
@@ -52,13 +55,21 @@ export function spawnDroppedItem(scene, type, count = 1, position, initialVel = 
         itemCanvas.height = 16;
         const ctx = itemCanvas.getContext('2d');
         
-        // Import draw2DIcon dynamically or render onto canvas
+        const itemTex = new THREE.CanvasTexture(itemCanvas);
+
+        // Draw into the canvas and flag the texture. Referencing itemTex AFTER
+        // its declaration avoids the temporal-dead-zone error that made the
+        // update never run, leaving the quad empty (black).
         import('./textures.js').then(module => {
             module.draw2DIcon(itemCanvas, type);
             itemTex.needsUpdate = true;
+        }).catch(() => {
+            // Atlas unavailable: paint a simple silhouette rather than black.
+            ctx.clearRect(0, 0, 16, 16);
+            ctx.fillStyle = '#7fae4e';
+            ctx.fillRect(7, 4, 2, 11);
+            itemTex.needsUpdate = true;
         });
-
-        const itemTex = new THREE.CanvasTexture(itemCanvas);
         itemTex.magFilter = THREE.NearestFilter;
         itemTex.minFilter = THREE.NearestFilter;
 
@@ -204,14 +215,23 @@ export function updateDroppedItems(scene, dt, playerPos) {
 
             // Pickup touch radius: 0.65 blocks
             if (distSq < 0.55) {
+                // addItemToInventory returns how many were ACTUALLY inserted, so a
+                // full inventory takes a partial stack instead of re-adding the whole
+                // pile on the next frame (which duplicated items).
                 const added = addItemToInventory(item.type, item.count);
-                if (added) {
+                if (added > 0) {
                     playSound('pickup');
-                    showPickupToast(item.type, item.count);
-                    
-                    // Remove item entity
+                    showPickupToast(item.type, added);
+
+                    item.count -= added;
+                    if (item.count > 0) {
+                        // Partial pickup: shrink the remaining pile and keep waiting.
+                        continue;
+                    }
+
+                    // Fully picked up: remove the entity
                     scene.remove(item.mesh);
-                    item.innerMesh.geometry.dispose();
+                    disposeItemGeometry(item.innerMesh);
                     activeDroppedItems.splice(i, 1);
                     continue;
                 }
@@ -220,13 +240,20 @@ export function updateDroppedItems(scene, dt, playerPos) {
     }
 }
 
+// Flat items (stick, ingots, tools, coal) all share the module-level
+// itemPlaneGeo. Disposing it would break every other flat item still on the
+// ground, so only per-item geometries (block items clone itemBoxGeo) are freed.
+function disposeItemGeometry(mesh) {
+    if (mesh && mesh.geometry && mesh.geometry !== itemPlaneGeo && mesh.geometry !== itemBoxGeo) {
+        mesh.geometry.dispose();
+    }
+}
+
 export function clearAllDroppedItems(scene) {
     if (!scene) return;
     for (const item of activeDroppedItems) {
         scene.remove(item.mesh);
-        if (item.innerMesh && item.innerMesh.geometry) {
-            item.innerMesh.geometry.dispose();
-        }
+        disposeItemGeometry(item.innerMesh);
     }
     activeDroppedItems.length = 0;
 }

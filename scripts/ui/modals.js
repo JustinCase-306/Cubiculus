@@ -268,21 +268,60 @@ export function applyPixelUIMode(enabled) {
     }
 }
 
+// Derive readable UI tokens from an arbitrary hex accent so the custom theme
+// recolours borders, surfaces and labels just like the built-in themes do.
+function hexToRgb(hex) {
+    const h = String(hex || '').replace('#', '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    if (full.length !== 6) return null;
+    const n = parseInt(full, 16);
+    if (isNaN(n)) return null;
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function mixRgb(c, target, amount) {
+    return {
+        r: Math.round(c.r + (target.r - c.r) * amount),
+        g: Math.round(c.g + (target.g - c.g) * amount),
+        b: Math.round(c.b + (target.b - c.b) * amount)
+    };
+}
+
+const rgbStr = (c) => `rgb(${c.r}, ${c.g}, ${c.b})`;
+
 export function applyUITheme(theme) {
     const themeClasses = ['theme-halflife', 'theme-amber', 'theme-portal', 'theme-emerald', 'theme-amethyst', 'theme-ruby', 'theme-gold', 'theme-slate', 'theme-custom'];
     themeClasses.forEach(cls => document.body.classList.remove(cls));
 
+    // Custom properties must be set on <body>, not <html>: the per-theme values
+    // live in `body.theme-*` rules, which override anything inherited from <html>.
+    const bodyStyle = document.body.style;
+    bodyStyle.removeProperty('--theme-accent');
+    bodyStyle.removeProperty('--theme-glow');
+    bodyStyle.removeProperty('--accent-text');
+    bodyStyle.removeProperty('--accent-surface');
+    bodyStyle.removeProperty('--accent-border-light');
+    bodyStyle.removeProperty('--accent-border-dark');
+    bodyStyle.removeProperty('--accent-label');
+
     if (theme === 'custom') {
         document.body.classList.add('theme-custom');
-        document.documentElement.style.setProperty('--theme-accent', GameSettings.customAccentColor || '#55ff55');
-        document.documentElement.style.setProperty('--theme-glow', GameSettings.customGlowColor || 'rgba(85, 255, 85, 0.45)');
+        const accent = GameSettings.customAccentColor || '#55ff55';
+        const glow = GameSettings.customGlowColor || 'rgba(85, 255, 85, 0.45)';
+        bodyStyle.setProperty('--theme-accent', accent);
+        bodyStyle.setProperty('--theme-glow', glow);
+
+        const c = hexToRgb(accent);
+        if (c) {
+            bodyStyle.setProperty('--accent-text', rgbStr(mixRgb(c, { r: 0, g: 0, b: 0 }, 0.65)));
+            bodyStyle.setProperty('--accent-surface', rgbStr(mixRgb(c, { r: 0, g: 0, b: 0 }, 0.25)));
+            bodyStyle.setProperty('--accent-border-light', rgbStr(mixRgb(c, { r: 255, g: 255, b: 255 }, 0.15)));
+            bodyStyle.setProperty('--accent-border-dark', rgbStr(mixRgb(c, { r: 0, g: 0, b: 0 }, 0.65)));
+            bodyStyle.setProperty('--accent-label', rgbStr(mixRgb(c, { r: 0, g: 0, b: 0 }, 0.55)));
+        }
     } else {
         const themeDef = UI_THEMES[theme] || UI_THEMES['emerald'];
         document.body.classList.add(`theme-${theme}`);
-        if (themeDef) {
-            document.documentElement.style.setProperty('--theme-accent', themeDef.accent);
-            document.documentElement.style.setProperty('--theme-glow', themeDef.glow);
-        }
     }
 }
 

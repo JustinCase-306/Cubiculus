@@ -123,12 +123,13 @@ export function getKeyDisplayName(code) {
 
 export const GameSettings = {
     // Internal physics constants (maintained for compatibility with game loop)
-    speed: 7.2,                  
-    jumpHeight: 11.8,            
-    gravity: 44.0,               
-    underwaterColor: "#000620",  
-    underwaterDensity: 0.85,     
-    leavesOpacity: 0.85,         
+    speed: 7.2,
+    jumpHeight: 11.8,
+    gravity: 44.0,
+    sprintSpeed: 9.6,           // must stay above `speed`, otherwise sprinting is slower than walking
+    underwaterColor: "#000620",
+    underwaterDensity: 0.85,
+    leavesOpacity: 0.85,
 
     // Audio & Graphics
     volume: 0.70,                // Audio master volume (0.0 to 1.0)
@@ -160,6 +161,7 @@ export const GameSettings = {
             speed: this.speed,
             jumpHeight: this.jumpHeight,
             gravity: this.gravity,
+            sprintSpeed: this.sprintSpeed,
             underwaterColor: this.underwaterColor,
             underwaterDensity: this.underwaterDensity,
             leavesOpacity: this.leavesOpacity,
@@ -193,6 +195,10 @@ export const GameSettings = {
                 if (parsed.speed !== undefined) this.speed = parseFloat(parsed.speed);
                 if (parsed.jumpHeight !== undefined) this.jumpHeight = parseFloat(parsed.jumpHeight);
                 if (parsed.gravity !== undefined) this.gravity = parseFloat(parsed.gravity);
+                if (parsed.sprintSpeed !== undefined) {
+                    const sp = parseFloat(parsed.sprintSpeed);
+                    if (!isNaN(sp) && sp > this.speed) this.sprintSpeed = sp;
+                }
                 if (parsed.underwaterColor !== undefined) this.underwaterColor = parsed.underwaterColor;
                 if (parsed.underwaterDensity !== undefined) this.underwaterDensity = parseFloat(parsed.underwaterDensity);
                 if (parsed.leavesOpacity !== undefined) this.leavesOpacity = parseFloat(parsed.leavesOpacity);

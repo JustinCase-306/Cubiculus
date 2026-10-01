@@ -108,13 +108,13 @@
     <!-- F3 Debug Screen (Toggled with F3 or button) -->
     <div id="f3-overlay">
         <div class="text-[#ffff55] font-bold">BrowserCraft 1.20 (WebGL 2.0)</div>
-        <div>FPS: <span id="fps-badge" class="text-[#55ff55]">60 FPS</span></div>
+        <div>FPS: <span id="fps-badge" class="accent-text">60 FPS</span></div>
         <div>XYZ: <span id="pos" class="text-white">0.0 / 64.0 / 0.0</span></div>
         <div>Block: <span id="block-pos" class="text-white">0 64 0</span></div>
         <div>Facing: <span id="facing" class="text-white">Nord (Negative Z)</span></div>
         <div>Zeit: <span id="time" class="text-white">Tag (12:00)</span></div>
         <div>Chunks: <span id="chunkCount" class="text-white">0</span></div>
-        <div>Biom: <span id="f3-biome" class="text-[#55ff55]">PLAINS</span></div>
+        <div>Biom: <span id="f3-biome" class="accent-text">PLAINS</span></div>
         <div>Seed: <span id="f3-seed" class="text-[#ffff55]">browsercraft</span></div>
         <div>Ducken: <span id="f3-crouch" class="text-white">Nein</span></div>
         <div class="text-[7px] text-[#aaaaaa] mt-1">[WASD] Bewegen &bull; [LEER] Sprung &bull; [SHIFT] Ducken &bull; [E] Inventar &bull; [Q] Drop</div>
@@ -269,7 +269,7 @@
                         <div class="mc-card sm:col-span-2">
                             <div class="mc-card-header">
                                 <span>SICHTWEITE (LOD):</span>
-                                <span id="cfg-render-dist-lbl" class="text-[#205020]">128 Chunks (Ultra-LoD Horizon)</span>
+                                <span id="cfg-render-dist-lbl" class="accent-label">128 Chunks (Ultra-LoD Horizon)</span>
                             </div>
                             <input type="range" id="cfg-render-dist" min="4" max="128" step="4" value="128" class="mc-slider mt-1" oninput="updateSetting('renderDistance', this.value)" />
                             
@@ -288,7 +288,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>LAUTSTAERKE:</span>
-                                <span id="cfg-volume-lbl" class="text-[#205020]">70%</span>
+                                <span id="cfg-volume-lbl" class="accent-label">70%</span>
                             </div>
                             <input type="range" id="cfg-volume" min="0" max="1" step="0.05" class="mc-slider" oninput="updateSetting('volume', this.value)" />
                         </div>
@@ -297,7 +297,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>NEBEL:</span>
-                                <span id="cfg-fog-enabled-lbl" class="text-[#205020]">AN</span>
+                                <span id="cfg-fog-enabled-lbl" class="accent-label">AN</span>
                             </div>
                             <button id="cfg-fog-enabled-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="toggleFogSetting()">
                                 NEBEL UMSCHALTEN
@@ -308,7 +308,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>LIQUID GLASS:</span>
-                                <span id="cfg-glass-lbl" class="text-[#205020]">DEAKTIVIERT</span>
+                                <span id="cfg-glass-lbl" class="accent-label">DEAKTIVIERT</span>
                             </div>
                             <button id="cfg-glass-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="toggleLiquidGlassSetting()">
                                 GLAS-MODUS UMSCHALTEN
@@ -319,7 +319,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>LAUB-TRANSPARENZ:</span>
-                                <span id="cfg-leaves-lbl" class="text-[#205020]">0.85</span>
+                                <span id="cfg-leaves-lbl" class="accent-label">0.85</span>
                             </div>
                             <input type="range" id="cfg-leaves" min="0.2" max="1.0" step="0.05" class="mc-slider" oninput="updateSetting('leavesOpacity', this.value)" />
                         </div>
@@ -328,7 +328,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>UNTERWASSER-FARBE:</span>
-                                <span id="cfg-underwater-color-lbl" class="text-[#205020]">#000620</span>
+                                <span id="cfg-underwater-color-lbl" class="accent-label">#000620</span>
                             </div>
                             <input type="color" id="cfg-underwater-color" value="#000620" class="h-6 w-12 cursor-pointer bg-transparent border border-[#373737]" onchange="updateSetting('underwaterColor', this.value)" />
                         </div>
@@ -337,7 +337,7 @@
                         <div class="mc-card">
                             <div class="mc-card-header">
                                 <span>PIXEL-UI:</span>
-                                <span id="cfg-pixel-ui-lbl" class="text-[#205020]">AKTIVIERT</span>
+                                <span id="cfg-pixel-ui-lbl" class="accent-label">AKTIVIERT</span>
                             </div>
                             <button id="cfg-pixel-ui-btn" class="mc-btn mc-btn-sm w-full mt-1" onclick="togglePixelUISetting()">
                                 PIXEL-UI UMSCHALTEN
@@ -348,7 +348,7 @@
                         <div class="mc-card sm:col-span-2">
                             <div class="mc-card-header">
                                 <span>UI FARBSCHEMA:</span>
-                                <span id="cfg-theme-lbl" class="text-[#205020]">KLASSISCH</span>
+                                <span id="cfg-theme-lbl" class="accent-label">KLASSISCH</span>
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                                 <button class="mc-btn mc-btn-sm" id="btn-theme-amber" onclick="setThemeSetting('amber')">BERNSTEIN</button>
@@ -393,7 +393,7 @@
                     <div class="mc-card">
                         <div class="mc-card-header">
                             <span>MASTER-LAUTSTAERKE:</span>
-                            <span id="cfg-volume-lbl-2" class="text-[#205020]">70%</span>
+                            <span id="cfg-volume-lbl-2" class="accent-label">70%</span>
                         </div>
                         <input type="range" id="cfg-volume-2" min="0" max="1" step="0.05" class="mc-slider" oninput="updateSetting('volume', this.value)" />
                         <div class="flex justify-between items-center mt-2">
@@ -414,7 +414,7 @@
                     <div class="mc-card">
                         <div class="mc-card-header">
                             <span>WELT-SEED:</span>
-                            <span id="cfg-active-seed-lbl" class="font-mono text-[#205020]">browsercraft</span>
+                            <span id="cfg-active-seed-lbl" class="font-mono accent-label">browsercraft</span>
                         </div>
                         <div class="text-[8px] text-[#444444] mb-1">
                             Gib einen beliebigen Text oder Zahlenwert ein, um eine prozedurale Landschaft zu generieren.

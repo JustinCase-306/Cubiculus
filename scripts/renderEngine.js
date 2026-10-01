@@ -9,7 +9,7 @@
 // - Static AABB Frustum Culling
 
 import * as THREE from 'three';
-import { BLOCKS, isTransparentBlock, isSolidBlock, blockColors } from './blocks.js';
+import { BLOCKS, isTransparentBlock, isSolidBlock, isCrossShaped, blockColors } from './blocks.js';
 import { getTileUV, getChunkMaterials, BLOCK_FACES, TILES } from './textures.js';
 import { CHUNK_SIZE, CHUNK_HEIGHT, getBlock, getChunkData, generateChunkData, dirtyChunks, getSurfacePoint, trimDistantChunks } from './worldGen.js';
 import { GameSettings } from './settings.js';
@@ -189,7 +189,11 @@ export function updateFog(renderDistance) {
     const maxDist = (rd + 12) * CHUNK_SIZE;
     const minDist = Math.max(128, Math.floor(rd * 0.7) * CHUNK_SIZE);
 
-    if (scene.fog) {
+    // Recreate the fog when it is missing: the fog toggle sets scene.fog = null,
+    // so without this the fog could never be switched back on within a session.
+    if (!scene.fog) {
+        scene.fog = new THREE.Fog(new THREE.Color(scene.background || 0x78a7ff), minDist, maxDist);
+    } else {
         scene.fog.near = minDist;
         scene.fog.far = maxDist;
     }
@@ -384,14 +388,59 @@ export function buildChunkMesh(cx, cz) {
                 const faces = BLOCK_FACES[type];
                 if (!faces) continue;
 
-                const isTrans = (
-                    type === BLOCKS.LEAVES ||
-                    type === BLOCKS.JUNGLE_LEAVES ||
-                    type === BLOCKS.SNOW_LEAVES ||
-                    type === BLOCKS.WATER ||
-                    type === BLOCKS.GLASS ||
-                    type === BLOCKS.ICE
-                );
+                // Use the single source of truth from blocks.js. This used to be a hardcoded
+                // list that silently fell out of sync: it was missing BIRCH_LEAVES,
+                // CACTUS and the plant blocks, so blocks whose texture relies on
+                // alpha (leaves, glass, flowers, grass tufts) were pushed into the
+                // OPAQUE mesh - where a material without alphaTest renders their
+                // fully transparent texels as solid black.
+                const isTrans = isTransparentBlock(type);
+
+                // Cross-shaped plants: two diagonal quads forming an X (viewed from
+                // above). Drawn instead of a cube so they read as foliage.
+                if (isCrossShaped(type)) {
+                    const tileIdx = faces[2] !== undefined ? faces[2] : faces[0];
+                    const [cu0, cv0, cu1, cv1] = getTileUV(tileIdx);
+                    const baseLight = 1.0;
+                    // Two VERTICAL planes rotated +-45 degrees around Y, each spanning
+                    // the full block height. They read as an X from above and stay
+                    // visible from the side, which is how Minecraft draws plants.
+                    // Horizontal quads would be coplanar with the ground and z-fight.
+                    const d = 0.5 / Math.SQRT2;          // half-diagonal of the footprint
+                    const a = 0.5 - d, b = 0.5 + d;
+                    const S = Math.SQRT1_2;
+                    const planes = [
+                        // runs along (+X,+Z); front face points (-X,+Z)
+                        { foot: [[a, a], [b, b]], nx: -S, nz: S },
+                        // runs along (-X,+Z); front face points (-X,-Z)
+                        { foot: [[b, a], [a, b]], nx: -S, nz: -S }
+                    ];
+                    for (let q = 0; q < planes.length; q++) {
+                        const pl = planes[q];
+                        const cBase = tVerts;
+                        const p0 = pl.foot[0], p1 = pl.foot[1];
+                        // bottom-left, bottom-right, top-right, top-left
+                        const pts = [
+                            [p0[0], y,     p0[1]],
+                            [p1[0], y,     p1[1]],
+                            [p1[0], y + 1, p1[1]],
+                            [p0[0], y + 1, p0[1]]
+                        ];
+                        for (let ci = 0; ci < 4; ci++) {
+                            sTransPos[tPos++] = gx + pts[ci][0];
+                            sTransPos[tPos++] = pts[ci][1];
+                            sTransPos[tPos++] = gz + pts[ci][2];
+                            sTransNorm[tNorm++] = pl.nx; sTransNorm[tNorm++] = 0; sTransNorm[tNorm++] = pl.nz;
+                            sTransUv[tUv++] = (ci === 0 || ci === 3) ? cu0 : cu1;
+                            sTransUv[tUv++] = (ci <= 1) ? cv0 : cv1;
+                            sTransColor[tCol++] = baseLight; sTransColor[tCol++] = baseLight; sTransColor[tCol++] = baseLight;
+                        }
+                        sTransIdx[tIdx++] = cBase + 0; sTransIdx[tIdx++] = cBase + 1; sTransIdx[tIdx++] = cBase + 2;
+                        sTransIdx[tIdx++] = cBase + 0; sTransIdx[tIdx++] = cBase + 2; sTransIdx[tIdx++] = cBase + 3;
+                        tVerts += 4;
+                    }
+                    continue;
+                }
 
                 // Test 6 faces
                                 for (let f = 0; f < 6; f++) {

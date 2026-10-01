@@ -79,7 +79,8 @@ export function updatePlayerPhysics(dt, moveDir, isJumping, isSprinting, isCrouc
 
     // Speed calculation (walk/sprint/crouch/swim) from GameSettings
     const walkSpeed = GameSettings.speed || 4.3;
-    const sprintSpeed = GameSettings.sprintSpeed || 6.6;
+    // Sprint must never be slower than walking: clamp against the walk speed.
+    const sprintSpeed = Math.max(GameSettings.sprintSpeed || 0, walkSpeed * 1.15);
     let baseSpeed = walkSpeed;
     if (isSprinting && !player.crouching) baseSpeed = sprintSpeed;
     if (player.crouching) baseSpeed = 2.0;
@@ -118,21 +119,43 @@ export function updatePlayerPhysics(dt, moveDir, isJumping, isSprinting, isCrouc
 
     // Step-by-step collision resolution on each axis
     // 1. Move Y (Vertical)
-    player.pos.y += player.vel.y * dt;
-    const boxMinY = new THREE.Vector3(player.pos.x - halfW, player.pos.y, player.pos.z - halfW);
-    const boxMaxY = new THREE.Vector3(player.pos.x + halfW, player.pos.y + player.h, player.pos.z + halfW);
+    // Substep the vertical move: at terminal velocity a single frame covers up to
+    // 3.2 blocks, which is enough to tunnel straight through a 1-block floor.
+    const maxStepDist = 0.4;
+    let remainingY = player.vel.y * dt;
+    const subSteps = Math.max(1, Math.ceil(Math.abs(remainingY) / maxStepDist));
+    let hitGround = false;
+    let hitCeiling = false;
 
-    if (checkVoxelCollision(boxMinY, boxMaxY)) {
-        if (player.vel.y < 0) {
-            // Landed on ground
-            player.pos.y = Math.floor(player.pos.y) + 1.0;
-            player.grounded = true;
-            player.vel.y = 0;
-        } else if (player.vel.y > 0) {
-            // Hit ceiling
-            player.pos.y = Math.floor(player.pos.y + player.h) - player.h - 0.01;
-            player.vel.y = 0;
+    for (let s = 0; s < subSteps; s++) {
+        const step = remainingY / subSteps;
+        if (step === 0) break;
+        player.pos.y += step;
+        const boxMinY = new THREE.Vector3(player.pos.x - halfW, player.pos.y, player.pos.z - halfW);
+        const boxMaxY = new THREE.Vector3(player.pos.x + halfW, player.pos.y + player.h, player.pos.z + halfW);
+
+        if (checkVoxelCollision(boxMinY, boxMaxY)) {
+            if (step < 0) {
+                // Landed. Because the move is substepped to <= 0.4 blocks, the feet
+                // are at most 0.4 below the surface, so snapping to the top of the
+                // voxel they are in lands exactly on it.
+                player.pos.y = Math.floor(player.pos.y) + 1.0;
+                hitGround = true;
+            } else {
+                // Hit ceiling: drop the head just under the solid voxel above.
+                player.pos.y = Math.floor(player.pos.y + player.h) - player.h - 0.01;
+                hitCeiling = true;
+            }
+            break;
         }
+        remainingY -= step;
+    }
+
+    if (hitGround) {
+        player.grounded = true;
+        player.vel.y = 0;
+    } else if (hitCeiling) {
+        player.vel.y = 0;
     } else {
         player.grounded = false;
     }

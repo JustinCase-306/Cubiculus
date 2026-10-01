@@ -69,7 +69,8 @@ function initGame() {
     setAudioVolume(GameSettings.volume);
 
     initRenderEngine(document.body);
-    updateFog(GameSettings.renderDistance);
+    if (GameSettings.fogEnabled) updateFog(GameSettings.renderDistance);
+    else if (scene) scene.fog = null;
 
     if (window.SimplexNoise) {
         setSimplex(new window.SimplexNoise());
@@ -91,7 +92,7 @@ function initGame() {
         },
         onSeedChanged: (newSeed) => applyNewWorldSeed(newSeed),
         onRenderDistanceChanged: (dist) => {
-            updateFog(dist);
+            if (GameSettings.fogEnabled) updateFog(dist);
             updateWorldChunks(player.pos, dist, true);
         }
     });
