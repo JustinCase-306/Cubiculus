@@ -537,32 +537,16 @@ export function buildChunkMesh(cx, cz) {
                         // A corner joins a neighbour that is exactly one block
                         // lower: the column's top block sits at y-1 and the block
                         // at our own level is air. Anything else keeps the edge.
-                        const oneStepDown = (dx, dz) => {
-                            let above, below;
-                            if (dx === 1) {
-                                above = lx < 15 ? chunkData[(y << 8) | (lz << 4) | (lx + 1)]
-                                                : (nXP ? nXP[(y << 8) | (lz << 4) | 0] : getBlock(gx + 1, y, gz));
-                                below = lx < 15 ? chunkData[((y - 1) << 8) | (lz << 4) | (lx + 1)]
-                                                : (nXP ? nXP[((y - 1) << 8) | (lz << 4) | 0] : getBlock(gx + 1, y - 1, gz));
-                            } else if (dx === -1) {
-                                above = lx > 0 ? chunkData[(y << 8) | (lz << 4) | (lx - 1)]
-                                                : (nXM ? nXM[(y << 8) | (lz << 4) | 15] : getBlock(gx - 1, y, gz));
-                                below = lx > 0 ? chunkData[((y - 1) << 8) | (lz << 4) | (lx - 1)]
-                                                : (nXM ? nXM[((y - 1) << 8) | (lz << 4) | 15] : getBlock(gx - 1, y - 1, gz));
-                            } else if (dz === 1) {
-                                above = lz < 15 ? chunkData[(y << 8) | ((lz + 1) << 4) | lx]
-                                                : (nZP ? nZP[(y << 8) | (lz << 4) | lx] : getBlock(gx, y, gz + 1));
-                                below = lz < 15 ? chunkData[((y - 1) << 8) | ((lz + 1) << 4) | lx]
-                                                : (nZP ? nZP[((y - 1) << 8) | (lz << 4) | lx] : getBlock(gx, y - 1, gz + 1));
-                            } else {
-                                above = lz > 0 ? chunkData[(y << 8) | ((lz - 1) << 4) | lx]
-                                                : (nZM ? nZM[(y << 8) | (15 << 4) | lx] : getBlock(gx, y, gz - 1));
-                                below = lz > 0 ? chunkData[((y - 1) << 8) | ((lz - 1) << 4) | lx]
-                                                : (nZM ? nZM[((y - 1) << 8) | (15 << 4) | lx] : getBlock(gx, y - 1, gz - 1));
-                            }
-                            // air at our level, solid one below -> exactly one step down
-                            return above === BLOCKS.AIR && isSolidBlock(below);
+                        // Reuse the mesh's own neighbour lookup: it already handles
+                        // the chunk borders through the nXP/nXM/nZP/nZM arrays, so
+                        // there is no second indexer to keep in sync.
+                        const faceAt = (dx, dz, atY) => {
+                            const f = dx === 1 ? 0 : dx === -1 ? 1 : dz === 1 ? 4 : 5;
+                            return sampleNeighborBlock(x, atY, z, f, gx, gz);
                         };
+
+                        const oneStepDown = (dx, dz) =>
+                            faceAt(dx, dz, y) === BLOCKS.AIR && isSolidBlock(faceAt(dx, dz, y - 1));
 
                         dipXPos = oneStepDown(1, 0) ? 1 : 0;
                         dipXNeg = oneStepDown(-1, 0) ? 1 : 0;
