@@ -1,4 +1,4 @@
-// BrowserCraft - Voxel Interaction, Mining & Block Placement System
+// Cubiculus - Voxel Interaction, Mining & Block Placement System
 import * as THREE from 'three';
 import { BLOCKS, isPlaceableBlock, getToolMultiplier, breakTimes } from './blocks.js';
 import { playSound } from './audio.js';

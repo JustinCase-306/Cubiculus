@@ -1,4 +1,4 @@
-// BrowserCraft - Modals Controller (Settings, Save Slots, Confirm Reset, Themes)
+// Cubiculus - Modals Controller (Settings, Save Slots, Confirm Reset, Themes)
 import { GameSettings, UI_THEMES } from '../settings.js';
 import { listAllSlots, getActiveSlotId, exportSlotJSON, importSlotJSON, deleteSlotWorld } from '../saveManager.js';
 import { playSound, setAudioVolume } from '../audio.js';

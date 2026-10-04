@@ -1,4 +1,4 @@
-// BrowserCraft - Keybinding Configuration & Rebinding Table
+// Cubiculus - Keybinding Configuration & Rebinding Table
 import { GameSettings, getKeyDisplayName, KEYBIND_LABELS, DEFAULT_KEYBINDS } from '../settings.js';
 import { playSound } from '../audio.js';
 

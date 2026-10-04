@@ -1,4 +1,4 @@
-// BrowserCraft - In-Game HUD, F3 Debug Screen & Underwater Screen Tint
+// Cubiculus - In-Game HUD, F3 Debug Screen & Underwater Screen Tint
 import { BLOCKS } from '../blocks.js';
 import { playSound } from '../audio.js';
 import { getFormattedTime } from '../dayNight.js';

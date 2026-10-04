@@ -1,4 +1,4 @@
-// BrowserCraft - Input Manager (Keyboard, Mouse, PointerLock & Dragging Fallback)
+// Cubiculus - Input Manager (Keyboard, Mouse, PointerLock & Dragging Fallback)
 import { GameSettings, DEFAULT_KEYBINDS } from './settings.js';
 import { playSound } from './audio.js';
 import { getActiveBindingAction, setActiveBindingAction, renderKeybindsTable } from './ui/keybinds.js';

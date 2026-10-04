@@ -1,4 +1,4 @@
-// BrowserCraft - In-Game Chat System & Commands
+// Cubiculus - In-Game Chat System & Commands
 import { setWorldTime } from '../dayNight.js';
 
 let chatHooks = {

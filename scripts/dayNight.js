@@ -1,4 +1,4 @@
-// BrowserCraft - Day / Night Cycle & Dynamic Sky Simulation
+// Cubiculus - Day / Night Cycle & Dynamic Sky Simulation
 import * as THREE from 'three';
 
 export let worldTime = 0.25; // 0.0 to 1.0 (0.25 = sunrise, 0.5 = midday, 0.75 = sunset, 0.0 = midnight)

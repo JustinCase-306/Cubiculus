@@ -1,4 +1,4 @@
-// BrowserCraft - Master Engine Orchestrator
+// Cubiculus - Master Engine Orchestrator
 import * as THREE from 'three';
 import { BLOCKS } from './blocks.js';
 import {
