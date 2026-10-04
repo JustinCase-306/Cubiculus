@@ -5,21 +5,30 @@ import { BLOCKS } from './blocks.js';
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 64;
 export const WATER_LEVEL = 18;
+
+// Usable build height. CHUNK_HEIGHT is 64, so the ceiling sits a few blocks
+// below the top: that headroom is what lets a jungle tree (canopy +12) finish
+// without being truncated.
+export const BUILD_MAX = 60;
+
+// Tallest canopy any tree reaches above its trunk base. Jungle is the tallest at
+// +12, so 13 blocks of headroom keeps every canopy complete.
+export const MAX_CANOPY_HEIGHT = 13;
 export const CHUNK_VOXELS = CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE; // 16,384
 
 // Biome definitions
 export const BIOMES = {
-    PLAINS: { name: 'PLAINS', baseH: 22, varH: 8, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.008 },
-    FOREST: { name: 'FOREST', baseH: 24, varH: 10, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.045 },
-    BIRCH_FOREST: { name: 'BIRCH_FOREST', baseH: 24, varH: 9, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.04 },
-    MOUNTAINS: { name: 'MOUNTAINS', baseH: 36, varH: 26, floor: BLOCKS.GRASS, sub: BLOCKS.STONE, treeChance: 0.005 },
-    DESERT: { name: 'DESERT', baseH: 21, varH: 6, floor: BLOCKS.SAND, sub: BLOCKS.SAND, treeChance: 0.012 },
-    BADLANDS: { name: 'BADLANDS', baseH: 26, varH: 14, floor: BLOCKS.TERRACOTTA, sub: BLOCKS.TERRACOTTA, treeChance: 0.0 },
-    SAVANNA: { name: 'SAVANNA', baseH: 23, varH: 7, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.01 },
-    TAIGA: { name: 'TAIGA', baseH: 25, varH: 11, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.038 },
-    SWAMP: { name: 'SWAMP', baseH: 19, varH: 3, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.02 },
-    JUNGLE: { name: 'JUNGLE', baseH: 25, varH: 12, floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.065 },
-    SNOWY_TUNDRA: { name: 'SNOWY_TUNDRA', baseH: 22, varH: 6, floor: BLOCKS.SNOW, sub: BLOCKS.DIRT, treeChance: 0.015 }
+    PLAINS: { name: 'PLAINS', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.006 },
+    FOREST: { name: 'FOREST', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.03 },
+    BIRCH_FOREST: { name: 'BIRCH_FOREST', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.032 },
+    MOUNTAINS: { name: 'MOUNTAINS', floor: BLOCKS.GRASS, sub: BLOCKS.STONE, treeChance: 0.004 },
+    DESERT: { name: 'DESERT', floor: BLOCKS.SAND, sub: BLOCKS.SANDSTONE, treeChance: 0.0 },
+    BADLANDS: { name: 'BADLANDS', floor: BLOCKS.TERRACOTTA, sub: BLOCKS.TERRACOTTA, treeChance: 0.0 },
+    SAVANNA: { name: 'SAVANNA', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.008 },
+    TAIGA: { name: 'TAIGA', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.03 },
+    SWAMP: { name: 'SWAMP', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.014 },
+    JUNGLE: { name: 'JUNGLE', floor: BLOCKS.GRASS, sub: BLOCKS.DIRT, treeChance: 0.05 },
+    SNOWY_TUNDRA: { name: 'SNOWY_TUNDRA', floor: BLOCKS.SNOW, sub: BLOCKS.DIRT, treeChance: 0.01 },
 };
 
 let simplex = (typeof window !== 'undefined' && window.SimplexNoise) ? new window.SimplexNoise() : null;
@@ -324,7 +333,18 @@ export function getTerrainHeight(gx, gz, biome) {
         h += detail * 1.5;
     }
 
-    return Math.max(3, Math.min(CHUNK_HEIGHT - 3, Math.floor(h)));
+    // Soft height ceiling.
+    //
+    // A hard Math.min(CHUNK_HEIGHT - 3, h) slices every tall mountain flat at the
+    // same y, which produces a plateau of identically-height peaks. Compressing
+    // the excess asymptotically keeps every peak its own height while still
+    // staying inside the column.
+    if (h > BUILD_MAX) {
+        const over = h - BUILD_MAX;
+        h = BUILD_MAX + over / (1 + over * 0.28);
+    }
+
+    return Math.max(3, Math.min(BUILD_MAX, Math.floor(h)));
 }
 
 // Fast zero-allocation procedural height & biome sampler for distant LoD chunks
@@ -338,6 +358,129 @@ export function getProceduralHeightAndBiome(gx, gz) {
 }
 
 // Ultra-fast deterministic surface point query for Macro and Mega LoD horizon meshes
+
+// ---------------------------------------------------------------------------
+// Water flow
+//
+// Generated water is static: every column fills to WATER_LEVEL and stays there,
+// so digging a channel does nothing and water never finds a low spot. This runs
+// a short settle pass over the chunks near the player so water spreads sideways
+// and falls into holes.
+//
+// Rules (one block per tick, in the order people expect):
+//   1. water with air below falls
+//   2. water spreads to the side when the block below that side is solid
+//   3. water only spreads downhill or level - never uphill
+// ---------------------------------------------------------------------------
+
+// How many flow steps a chunk may still settle. Water needs several passes to
+// fall into a pit and fill it, so this is a countdown rather than a one-shot
+// latch; a chunk that stops changing drains to zero and is then left alone.
+const flowCooldown = new Map();
+const FLOW_SETTLE_STEPS = 6;
+
+// Returns the number of blocks that moved.
+export function tickWaterFlow(cx, cz) {
+    const key = `${cx},${cz}`;
+    const left = flowCooldown.get(key) || 0;
+    if (left <= 0) return 0;
+    flowCooldown.set(key, left - 1);
+
+    let moved = 0;
+
+    // Operate on a scratch copy so a single pass cannot cascade arbitrarily far.
+    const pending = [];
+
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        const gx = cx * CHUNK_SIZE + x;
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const gz = cz * CHUNK_SIZE + z;
+
+            for (let y = 2; y < CHUNK_HEIGHT - 1; y++) {
+                if (getBlock(gx, y, gz) !== BLOCKS.WATER) continue;
+
+                // 1. fall straight down
+                if (getBlock(gx, y - 1, gz) === BLOCKS.AIR) {
+                    pending.push([gx, y - 1, gz, BLOCKS.WATER]);
+                    continue;
+                }
+
+                const below = getBlock(gx, y - 1, gz);
+                const canSpread = below !== BLOCKS.AIR && below !== BLOCKS.WATER;
+
+                // 3. only move to a side that is not higher
+                if (canSpread) {
+                    for (const [dx, dz] of FLOW_DIRS) {
+                        const nx = gx + dx, nz = gz + dz;
+                        if (getBlock(nx, y, nz) !== BLOCKS.AIR) continue;
+
+                        const supportY = findSurfaceY(nx, nz);
+                        // no floor at all -> the side column is a hole, water pours in
+                        if (supportY < 0) {
+                            pending.push([nx, y, nz, BLOCKS.WATER]);
+                            continue;
+                        }
+                        // the target column's floor must be at or below our floor
+                        if (supportY <= y - 1) {
+                            pending.push([nx, y, nz, BLOCKS.WATER]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (const [x, y, z, id] of pending) {
+        if (getBlock(x, y, z) !== BLOCKS.AIR) continue;
+        setBlockInternal(x, y, z, id);
+        moved++;
+        if (moved >= FLOW_BUDGET) break;
+    }
+
+    if (moved > 0) {
+        // keep settling: a moving chunk earns a fresh countdown
+        flowCooldown.set(key, FLOW_SETTLE_STEPS);
+
+        // mark the chunk and its neighbours: spread can cross a border
+        markChunkDirty(cx, cz);
+        markChunkDirty(cx - 1, cz);
+        markChunkDirty(cx + 1, cz);
+        markChunkDirty(cx, cz - 1);
+        markChunkDirty(cx, cz + 1);
+    }
+    return moved;
+}
+
+const FLOW_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const FLOW_BUDGET = 64;
+
+// Highest solid block in a column, or -1 when the column is empty all the way
+// down (which means an open pit).
+function findSurfaceY(gx, gz) {
+    for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
+        const b = getBlock(gx, y, gz);
+        if (b === BLOCKS.AIR || b === BLOCKS.WATER) continue;
+        return y;
+    }
+    return -1;
+}
+
+// Give every loaded chunk a settling budget. Called once after generation so
+// existing pools and lakes start flowing without waiting for the player to walk
+// over them.
+export function primeWaterFlow() {
+    flowCooldown.clear();
+    for (const key of generatedChunks.keys()) {
+        const [cx, cz] = key.split(',');
+        flowCooldown.set(`${cx},${cz}`, FLOW_SETTLE_STEPS);
+    }
+}
+
+// Forget the flow bookkeeping, e.g. after a world reset or load.
+export function resetWaterFlow() {
+    flowCooldown.clear();
+}
+
 export function getSurfacePoint(gx, gz) {
     if (!simplex && typeof window !== 'undefined' && window.SimplexNoise) {
         simplex = new window.SimplexNoise();
@@ -613,8 +756,10 @@ export function generateChunkData(cx, cz) {
             const h = heights[colIdx];
 
             // Need clearance for the tallest tree (jungle canopy reaches +12).
-            // Without this, a tree on high ground is silently truncated at y=63.
-            if (h < WATER_LEVEL + 1 || h + 13 >= CHUNK_HEIGHT) continue;
+            // Compare against BUILD_MAX, not CHUNK_HEIGHT: the terrain tops out
+            // below the chunk ceiling, and using the wrong bound silently removed
+            // every tree from high ground.
+            if (h < WATER_LEVEL + 1 || h + MAX_CANOPY_HEIGHT >= BUILD_MAX) continue;
 
             // Cluster mask: a low-frequency field that is only positive inside
             // groves. Combined with a per-column hash this produces dense forest
@@ -697,34 +842,87 @@ function treeClusterMask(gx, gz, biomeName) {
 // Only plants on a clear grass surface one block above water, and never on a block
 // that a tree or cactus already occupies.
 function decorateGroundCover(gx, gz, h, biome) {
-    if (h < WATER_LEVEL + 1 || h + 1 >= CHUNK_HEIGHT) return;
+    if (h < WATER_LEVEL + 1 || h + 1 >= BUILD_MAX) return;
 
     const name = biome.name;
-    const grassy = name === 'PLAINS' || name === 'FOREST' || name === 'BIRCH_FOREST' ||
-                   name === 'SAVANNA' || name === 'JUNGLE';
-    const snowy = name === 'SNOWY_TUNDRA';
-    if (!grassy && !snowy) return;
 
-    // The cell must actually be free and sit on the biome floor.
+    // The cell must actually be free before anything is placed.
     const above = getBlock(gx, h + 1, gz);
     if (above !== BLOCKS.AIR) return;
 
     const surface = getBlock(gx, h, gz);
-    if (grassy && surface !== BLOCKS.GRASS) return;
-    if (snowy && surface !== BLOCKS.SNOW && surface !== BLOCKS.GRAVEL) return;
+    const roll = hash2D(gx, gz, 0x9E37);
+    const accent = hash2D(gx, gz, 0x85EB);
 
-    // Density: sparse tufts with rarer flower accents. Ground cover should
-    // punctuate the landscape, not carpet it.
-    const grassRoll = hash2D(gx, gz, 0x9E37);
-    const flowerRoll = hash2D(gx, gz, 0x85EB);
-    const flowerChance = grassy ? 0.012 : 0.004;
+    switch (name) {
+        case 'PLAINS':
+        case 'FOREST':
+        case 'BIRCH_FOREST':
+        case 'SAVANNA':
+        case 'JUNGLE': {
+            if (surface !== BLOCKS.GRASS) return;
+            if (accent < 0.012) {
+                const yellow = hash2D(gx, gz, 0xC2B2) < 0.5;
+                setBlockInternal(gx, h + 1, gz, yellow ? BLOCKS.FLOWER_YELLOW : BLOCKS.FLOWER_RED);
+            } else if (roll < 0.10) {
+                setBlockInternal(gx, h + 1, gz, BLOCKS.TALL_GRASS);
+            }
+            return;
+        }
 
-    if (flowerRoll < flowerChance) {
-        // Alternate red / yellow so a field does not look monochrome.
-        const yellow = hash2D(gx, gz, 0xC2B2) < 0.5;
-        setBlockInternal(gx, h + 1, gz, yellow ? BLOCKS.FLOWER_YELLOW : BLOCKS.FLOWER_RED);
-    } else if (grassRoll < (grassy ? 0.10 : 0.05)) {
-        setBlockInternal(gx, h + 1, gz, BLOCKS.TALL_GRASS);
+        case 'TAIGA': {
+            // Cold forest floor: mossy patches instead of flowers.
+            if (surface !== BLOCKS.GRASS) return;
+            if (roll < 0.09) {
+                setBlockInternal(gx, h + 1, gz, BLOCKS.MOSSY_COBBLESTONE);
+            } else if (roll < 0.14) {
+                setBlockInternal(gx, h + 1, gz, BLOCKS.TALL_GRASS);
+            }
+            return;
+        }
+
+        case 'SWAMP': {
+            // Murky, waterlogged ground: lily pads of moss and dead shrubs.
+            if (surface !== BLOCKS.GRASS && surface !== BLOCKS.DIRT) return;
+            if (roll < 0.05) {
+                setBlockInternal(gx, h + 1, gz, BLOCKS.MOSSY_COBBLESTONE);
+            } else if (roll < 0.09) {
+                setBlockInternal(gx, h + 1, gz, BLOCKS.TALL_GRASS);
+            }
+            return;
+        }
+
+        case 'DESERT': {
+            // Sparse dead bushes and cactus; bare sand between.
+            if (surface !== BLOCKS.SAND) return;
+            if (roll < 0.006) {
+                const tall = hash2D(gx, gz, 0x5A5A) < 0.5;
+                setBlockInternal(gx, h + 1, gz, BLOCKS.CACTUS);
+                if (tall) setBlockInternal(gx, h + 2, gz, BLOCKS.CACTUS);
+            }
+            return;
+        }
+
+        case 'BADLANDS': {
+            if (surface !== BLOCKS.TERRACOTTA) return;
+            if (roll < 0.008) setBlockInternal(gx, h + 1, gz, BLOCKS.CACTUS);
+            return;
+        }
+
+        case 'SNOWY_TUNDRA': {
+            // Snow with the occasional frozen shrub.
+            if (surface !== BLOCKS.SNOW && surface !== BLOCKS.GRAVEL) return;
+            if (roll < 0.012) setBlockInternal(gx, h + 1, gz, BLOCKS.TALL_GRASS);
+            return;
+        }
+
+        case 'MOUNTAINS': {
+            // Bare rock and snow up here, so only loose gravel collects.
+            if (surface !== BLOCKS.GRASS && surface !== BLOCKS.STONE &&
+                surface !== BLOCKS.GRAVEL) return;
+            if (roll < 0.010) setBlockInternal(gx, h + 1, gz, BLOCKS.GRAVEL);
+            return;
+        }
     }
 }
 

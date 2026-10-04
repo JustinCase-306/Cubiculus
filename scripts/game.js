@@ -8,7 +8,8 @@ import {
 } from './renderEngine.js';
 import {
     modifiedWorldData, getBlock, resetWorldState,
-    loadWorldState, setSimplex, setWorldSeed, getWorldSeed, findSafeSpawn
+    loadWorldState, setSimplex, setWorldSeed, getWorldSeed, findSafeSpawn,
+    tickWaterFlow, resetWaterFlow
 } from './worldGen.js';
 import { player, updatePlayerPhysics, checkVoxelCollision } from './physics.js';
 import {
@@ -225,6 +226,7 @@ function loadCurrentSlot(slotId) {
     } else {
         setWorldSeed(GameSettings.worldSeed);
         resetWorldState();
+        resetWaterFlow();
         initInventory();
         const spawn = findSafeSpawn(8, 8);
         player.pos.set(spawn.x, spawn.y, spawn.z);
@@ -264,6 +266,7 @@ function applyNewWorldSeed(newSeed) {
     clearAllChunks();
     clearAllDroppedItems(scene);
     resetWorldState();
+    resetWaterFlow();
     initInventory();
 
     const spawn = findSafeSpawn(8, 8);
@@ -309,6 +312,11 @@ function setupUI() {
         });
     });
 }
+
+// Water flow runs on its own slow clock instead of every frame.
+const WATER_FLOW_INTERVAL = 0.25;      // seconds between flow steps
+const WATER_FLOW_CHUNKS_PER_TICK = 2; // chunks touched per step
+let waterFlowAccum = 0;
 
 function gameLoop(now) {
     requestAnimationFrame(gameLoop);
@@ -369,6 +377,25 @@ function gameLoop(now) {
         // 5. World Chunks & Meshing
         updateWorldChunks(player.pos, GameSettings.renderDistance);
         processChunkQueue();
+
+        // 5b. Water flow: a few chunks per second is plenty, running it every
+        // frame would be pure overhead since water moves one block per tick.
+        waterFlowAccum += dt;
+        if (waterFlowAccum >= WATER_FLOW_INTERVAL && isGameActive) {
+            waterFlowAccum = 0;
+            let budget = WATER_FLOW_CHUNKS_PER_TICK;
+            const pcx = Math.floor(player.pos.x / 16);
+            const pcz = Math.floor(player.pos.z / 16);
+            for (let ring = 0; ring <= 2 && budget > 0; ring++) {
+                for (let dz = -ring; dz <= ring && budget > 0; dz++) {
+                    for (let dx = -ring; dx <= ring && budget > 0; dx++) {
+                        // only the outer edge of each ring is new work
+                        if (ring > 0 && Math.abs(dx) !== ring && Math.abs(dz) !== ring) continue;
+                        if (tickWaterFlow(pcx + dx, pcz + dz) > 0) budget--;
+                    }
+                }
+            }
+        }
 
         // 6. Dropped Physical Items & Magnetic Pickup
         updateDroppedItems(scene, dt, player.pos);
