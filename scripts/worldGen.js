@@ -8,7 +8,41 @@ export const CHUNK_HEIGHT = 64;
 // fall into a pit and fill it, so this is a countdown rather than a one-shot
 // latch; a chunk that stops changing drains to zero and is then left alone.
 const flowCooldown = new Map();
-const FLOW_SETTLE_STEPS = 6;
+// A chunk needs at least WATER_MAX_LEVEL settle steps so water can travel its
+// full distance; 12 leaves room for a second wave after the player digs.
+const FLOW_SETTLE_STEPS = 12;
+
+// Water levels, Minecraft-style.
+//
+// A source is level 0 and every spread adds one. At WATER_MAX_LEVEL the block
+// stops spreading, which is what bounds a puddle instead of letting it run to
+// the horizon. The further out a block is, the lower its surface is drawn.
+export const WATER_MAX_LEVEL = 7;
+
+// Block id -> per-voxel level. The voxel array is a Uint8Array and already uses
+// its full byte for the block id, so the level needs a side table.
+const waterLevels = new Map();
+
+function wlKey(x, y, z) {
+    return `${x},${y},${z}`;
+}
+
+// The level of a water block, or -1 when the position is not water.
+export function getWaterLevel(x, y, z) {
+    const k = wlKey(Math.floor(x), Math.floor(y), Math.floor(z));
+    const v = waterLevels.get(k);
+    return v === undefined ? -1 : v;
+}
+
+function setWaterLevel(x, y, z, level) {
+    waterLevels.set(wlKey(x, y, z), level);
+}
+
+// Dropping a water source (level 0) resets the spread.
+export function setWaterSource(x, y, z) {
+    setBlockInternal(Math.floor(x), Math.floor(y), Math.floor(z), BLOCKS.WATER);
+    setWaterLevel(x, y, z, 0);
+}
 
 export const WATER_LEVEL = 18;
 
@@ -426,16 +460,15 @@ export function getProceduralHeightAndBiome(gx, gz) {
 //   3. water only spreads downhill or level - never uphill
 // ---------------------------------------------------------------------------
 
-// Settles water in one chunk.
+// Spreads water inside one chunk, Minecraft-style.
 //
-// Water is not really "flowing" - it is a static fluid that fills every hollow it
-// can reach and then stops. The previous version MOVED water (placing it at the
-// target and clearing the source), which spread a single lake across the whole
-// landscape and stripped the ground as it went.
+// Water does not move, it fills: a block stays put and its level rises. A source
+// is level 0; every neighbour it reaches gets level+1; at WATER_MAX_LEVEL the
+// block stops spreading. Because the level grows with every step, water can only
+// travel WATER_MAX_LEVEL blocks from its source, and the surface gets lower the
+// further out it reaches.
 //
-// The correct rule is much simpler: water stays where it is, and adds itself to
-// an adjacent air block when that block is not above our own floor level.
-// Returns the number of blocks that were added.
+// Returns the number of blocks that were added or changed.
 export function tickWaterFlow(cx, cz) {
     const key = `${cx},${cz}`;
     let left = flowCooldown.get(key);
@@ -450,7 +483,8 @@ export function tickWaterFlow(cx, cz) {
     const gx0 = cx * CHUNK_SIZE;
     const gz0 = cz * CHUNK_SIZE;
 
-    // Scan bottom-up so water settles in one pass instead of oscillating.
+    // Walk from the lowest level outwards so a spread cascades in one pass
+    // instead of needing one full pass per block travelled.
     const adds = [];
 
     for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -460,39 +494,50 @@ export function tickWaterFlow(cx, cz) {
             for (let y = 2; y < CHUNK_HEIGHT - 1; y++) {
                 if (getBlock(gx, y, gz) !== BLOCKS.WATER) continue;
 
-                // 1. fall straight down: only ever one block, so a waterfall steps
-                //    down over several ticks instead of teleporting to the bottom
+                const level = getWaterLevel(gx, y, gz);
+
+                // A block with no recorded level is water that came from world
+                // generation. Treat it as a source so lakes still behave.
+                const myLevel = level < 0 ? 0 : level;
+
+                // At the last level the water no longer spreads: this is the bound
+                // that keeps a puddle local.
+                if (myLevel >= WATER_MAX_LEVEL) continue;
+
+                const next = myLevel + 1;
+
+                // 1. fall straight down. Water keeps its level while falling.
                 if (getBlock(gx, y - 1, gz) === BLOCKS.AIR) {
-                    adds.push([gx, y - 1, gz]);
+                    adds.push([gx, y - 1, gz, next, myLevel]);
                     continue;
                 }
 
-                // 2. spread sideways into a neighbour that can hold water at this
-                //    level. "Can hold" means the neighbour's floor is not higher
-                //    than the floor we are sitting on - that is what lets water run
-                //    across a flat bank into a one-block-deep channel, and what
-                //    stops it from climbing a hillside.
-                const nbr = [];
-                for (const [dx, dz] of FLOW_DIRS) {
-                    const nx = gx + dx, nz = gz + dz;
-                    if (getBlock(nx, y, nz) !== BLOCKS.AIR) continue;
-                    nbr.push([nx, nz]);
-                }
-                if (nbr.length === 0) continue;
-
+                // 2. spread sideways. The neighbour must be able to hold water at
+                //    this level: its floor may not be higher than the floor we sit
+                //    on. That is what lets water run over flat ground into a
+                //    one-block-deep channel and what stops it climbing a hill.
                 const myFloor = findFloorY(gx, gz, y);
+                if (myFloor < 0) continue;
 
-                for (const [nx, nz] of nbr) {
+                for (const [dx, dz] of FLOW_DIRS) {
                     if (adds.length >= FLOW_BUDGET) break;
-                    const nFloor = findFloorY(nx, nz, y);
+                    const nx = gx + dx, nz = gz + dz;
 
-                    // -1 means the neighbour has no floor at all within reach: a
-                    // shaft, so the water drops in rather than sitting at this level
-                    if (nFloor < 0) {
-                        adds.push([nx, y, nz]);
+                    const existing = getBlock(nx, y, nz);
+                    if (existing !== BLOCKS.AIR && existing !== BLOCKS.WATER) continue;
+
+                    const nFloor = findFloorY(nx, nz, y);
+                    if (nFloor < 0) continue;
+                    if (nFloor > myFloor) continue;
+
+                    // already water: only replace it if we bring a fuller level
+                    if (existing === BLOCKS.WATER) {
+                        const nLevel = getWaterLevel(nx, y, nz);
+                        if (nLevel >= 0 && nLevel <= next) continue;
+                        adds.push([nx, y, nz, next, myLevel, true]);
                         continue;
                     }
-                    if (nFloor <= myFloor) adds.push([nx, y, nz]);
+                    adds.push([nx, y, nz, next, myLevel]);
                 }
             }
         }
@@ -500,16 +545,19 @@ export function tickWaterFlow(cx, cz) {
 
     if (adds.length === 0) return 0;
 
-    let placed = 0;
-    for (const [x, y, z] of adds) {
-        if (placed >= FLOW_BUDGET) break;
-        if (getBlock(x, y, z) !== BLOCKS.AIR) continue;
+    let changed = 0;
+    for (const [x, y, z, level] of adds) {
+        if (changed >= FLOW_BUDGET) break;
+        const cur = getBlock(x, y, z);
+        if (cur !== BLOCKS.AIR && cur !== BLOCKS.WATER) continue;
         setBlockInternal(x, y, z, BLOCKS.WATER);
-        placed++;
+        setWaterLevel(x, y, z, level);
+        changed++;
     }
 
-    if (placed > 0) {
-        // a chunk that gained water earns a fresh countdown so it can settle fully
+    if (changed > 0) {
+        // a chunk that changed earns a fresh countdown so the water can finish
+        // travelling instead of stopping mid-stream
         flowCooldown.set(key, FLOW_SETTLE_STEPS);
 
         markChunkDirty(cx, cz);
@@ -518,7 +566,7 @@ export function tickWaterFlow(cx, cz) {
         markChunkDirty(cx, cz - 1);
         markChunkDirty(cx, cz + 1);
     }
-    return placed;
+    return changed;
 }
 
 const FLOW_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -551,6 +599,7 @@ export function primeWaterFlow() {
 // Forget the flow bookkeeping, e.g. after a world reset or load.
 export function resetWaterFlow() {
     flowCooldown.clear();
+    waterLevels.clear();
 }
 
 export function getSurfacePoint(gx, gz) {

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { BLOCKS, isTransparentBlock, isSolidBlock, isCrossShaped, blockColors } from './blocks.js';
 import { getTileUV, getChunkMaterials, BLOCK_FACES, TILES } from './textures.js';
-import { CHUNK_SIZE, CHUNK_HEIGHT, getBlock, getChunkData, generateChunkData, dirtyChunks, getSurfacePoint, trimDistantChunks } from './worldGen.js';
+import { CHUNK_SIZE, CHUNK_HEIGHT, getBlock, getChunkData, generateChunkData, dirtyChunks, getSurfacePoint, trimDistantChunks, getWaterLevel } from './worldGen.js';
 import { GameSettings } from './settings.js';
 
 // Face direction vectors & face vertex corner offsets
@@ -460,8 +460,17 @@ export function buildChunkMesh(cx, cz) {
                                                     // faces against air. Drawing only the top face made a water
                                                     // column invisible from the side, so you could see straight
                                                     // through it.
+                                                    let topDrop = 0;
                                                     if (type === BLOCKS.WATER) {
                                                         if (neighbor === BLOCKS.WATER) emitFace = false;
+
+                                                        // Minecraft lowers the surface by 1/8 block per spread level,
+                                                        // so water that travelled further from its source sits
+                                                        // visibly lower than the water next to it.
+                                                        if (f === 2) {
+                                                            const lvl = getWaterLevel(gx, y, gz);
+                                                            if (lvl > 0) topDrop = lvl / 8;
+                                                        }
                                                     }
 
                                                     if (!emitFace) continue;
@@ -484,7 +493,7 @@ export function buildChunkMesh(cx, cz) {
                         const baseV = tVerts;
                         // Corner 0
                         sTransPos[tPos++] = gx + corners[0][0];
-                        sTransPos[tPos++] = y + corners[0][1];
+                        sTransPos[tPos++] = y + corners[0][1] - topDrop;
                         sTransPos[tPos++] = gz + corners[0][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v0;
@@ -493,7 +502,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 1
                         sTransPos[tPos++] = gx + corners[1][0];
-                        sTransPos[tPos++] = y + corners[1][1];
+                        sTransPos[tPos++] = y + corners[1][1] - topDrop;
                         sTransPos[tPos++] = gz + corners[1][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v0;
@@ -502,7 +511,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 2
                         sTransPos[tPos++] = gx + corners[2][0];
-                        sTransPos[tPos++] = y + corners[2][1];
+                        sTransPos[tPos++] = y + corners[2][1] - topDrop;
                         sTransPos[tPos++] = gz + corners[2][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v1;
@@ -511,7 +520,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 3
                         sTransPos[tPos++] = gx + corners[3][0];
-                        sTransPos[tPos++] = y + corners[3][1];
+                        sTransPos[tPos++] = y + corners[3][1] - topDrop;
                         sTransPos[tPos++] = gz + corners[3][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v1;

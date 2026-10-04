@@ -314,8 +314,8 @@ function setupUI() {
 }
 
 // Water flow runs on its own slow clock instead of every frame.
-const WATER_FLOW_INTERVAL = 0.25;      // seconds between flow steps
-const WATER_FLOW_CHUNKS_PER_TICK = 2; // chunks touched per step
+const WATER_FLOW_INTERVAL = 0.55;      // seconds between flow steps
+const WATER_FLOW_CHUNKS_PER_TICK = 1; // chunks touched per step
 let waterFlowAccum = 0;
 
 function gameLoop(now) {
