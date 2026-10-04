@@ -15,6 +15,12 @@ import { CHUNK_SIZE, CHUNK_HEIGHT, getBlock, getChunkData, generateChunkData, di
 import { GameSettings } from './settings.js';
 
 // Face direction vectors & face vertex corner offsets
+// Horizontal/vertical neighbour offset per face index, matching FACE_DIRS order.
+// Handy inside the mesher, where FACE_DIRS itself is not in scope yet.
+const WATER_FACE_NEIGHBOUR = [
+    [1, 0], [-1, 0], [0, 0], [0, 0], [0, 1], [0, -1]
+];
+
 export const FACE_DIRS = [
     { dir: [1, 0, 0], norm: [1, 0, 0], light: 0.82, name: '+X' },
     { dir: [-1, 0, 0], norm: [-1, 0, 0], light: 0.82, name: '-X' },
@@ -461,15 +467,44 @@ export function buildChunkMesh(cx, cz) {
                                                     // column invisible from the side, so you could see straight
                                                     // through it.
                                                     let topDrop = 0;
+                                                    let sideDrop = 0;
                                                     if (type === BLOCKS.WATER) {
-                                                        if (neighbor === BLOCKS.WATER) emitFace = false;
+                                                        // How much lower our own surface sits: 1/8 block per
+                                                        // spread level.
+                                                        const lvl = getWaterLevel(gx, y, gz);
+                                                        const myDrop = lvl > 0 ? lvl / 8 : 0;
 
-                                                        // Minecraft lowers the surface by 1/8 block per spread level,
-                                                        // so water that travelled further from its source sits
-                                                        // visibly lower than the water next to it.
                                                         if (f === 2) {
-                                                            const lvl = getWaterLevel(gx, y, gz);
-                                                            if (lvl > 0) topDrop = lvl / 8;
+                                                            topDrop = myDrop;
+
+                                                            // The top face may be hidden, but only by water that
+                                                            // reaches at least as high as ours. Water that sits
+                                                            // lower leaves a step that must stay visible, otherwise
+                                                            // the gap shows the dark interior as a lattice.
+                                                            if (neighbor === BLOCKS.WATER) {
+                                                                const nOff = WATER_FACE_NEIGHBOUR[f];
+                                                                const nl = getWaterLevel(
+                                                                    gx + nOff[0], y, gz + nOff[1]
+                                                                );
+                                                                const nDrop = nl > 0 ? nl / 8 : 0;
+                                                                if (nDrop <= myDrop) emitFace = false;
+                                                            }
+                                                        } else {
+                                                            // Side face against water: keep it unless the
+                                                            // neighbour is solid ground. The strip of water
+                                                            // between two levels is exactly what makes a
+                                                            // flowing stream look like a surface instead of
+                                                            // a hole.
+                                                            if (neighbor === BLOCKS.WATER) {
+                                                                const nOff = WATER_FACE_NEIGHBOUR[f];
+                                                                const nl = getWaterLevel(
+                                                                    gx + nOff[0], y, gz + nOff[1]
+                                                                );
+                                                                const nDrop = nl > 0 ? nl / 8 : 0;
+                                                                // the step between the two levels
+                                                                sideDrop = myDrop - nDrop;
+                                                                if (sideDrop <= 0.001) emitFace = false;
+                                                            }
                                                         }
                                                     }
 
@@ -493,7 +528,7 @@ export function buildChunkMesh(cx, cz) {
                         const baseV = tVerts;
                         // Corner 0
                         sTransPos[tPos++] = gx + corners[0][0];
-                        sTransPos[tPos++] = y + corners[0][1] - topDrop;
+                        sTransPos[tPos++] = y + corners[0][1] - topDrop + (corners[0][1] === 0 ? sideDrop : 0);
                         sTransPos[tPos++] = gz + corners[0][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v0;
@@ -502,7 +537,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 1
                         sTransPos[tPos++] = gx + corners[1][0];
-                        sTransPos[tPos++] = y + corners[1][1] - topDrop;
+                        sTransPos[tPos++] = y + corners[1][1] - topDrop + (corners[1][1] === 0 ? sideDrop : 0);
                         sTransPos[tPos++] = gz + corners[1][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v0;
@@ -511,7 +546,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 2
                         sTransPos[tPos++] = gx + corners[2][0];
-                        sTransPos[tPos++] = y + corners[2][1] - topDrop;
+                        sTransPos[tPos++] = y + corners[2][1] - topDrop + (corners[2][1] === 0 ? sideDrop : 0);
                         sTransPos[tPos++] = gz + corners[2][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v1;
@@ -520,7 +555,7 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 3
                         sTransPos[tPos++] = gx + corners[3][0];
-                        sTransPos[tPos++] = y + corners[3][1] - topDrop;
+                        sTransPos[tPos++] = y + corners[3][1] - topDrop + (corners[3][1] === 0 ? sideDrop : 0);
                         sTransPos[tPos++] = gz + corners[3][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v1;
