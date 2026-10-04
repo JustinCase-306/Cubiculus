@@ -419,7 +419,16 @@ export function getProceduralHeightAndBiome(gx, gz) {
 const flowCooldown = new Map();
 const FLOW_SETTLE_STEPS = 6;
 
-// Returns the number of blocks that moved.
+// Settles water in one chunk.
+//
+// Water is not really "flowing" - it is a static fluid that fills every hollow it
+// can reach and then stops. The previous version MOVED water (placing it at the
+// target and clearing the source), which spread a single lake across the whole
+// landscape and stripped the ground as it went.
+//
+// The correct rule is much simpler: water stays where it is, and adds itself to
+// an adjacent air block when that block is not above our own floor level.
+// Returns the number of blocks that were added.
 export function tickWaterFlow(cx, cz) {
     const key = `${cx},${cz}`;
     let left = flowCooldown.get(key);
@@ -431,11 +440,11 @@ export function tickWaterFlow(cx, cz) {
     if (left <= 0) return 0;
     flowCooldown.set(key, left - 1);
 
-    // Collect the moves first, then apply them, so one pass cannot cascade.
-    // Each entry is [fromX, fromY, fromZ, toX, toY, toZ].
-    const moves = [];
     const gx0 = cx * CHUNK_SIZE;
     const gz0 = cz * CHUNK_SIZE;
+
+    // Scan bottom-up so water settles in one pass instead of oscillating.
+    const adds = [];
 
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
@@ -444,66 +453,65 @@ export function tickWaterFlow(cx, cz) {
             for (let y = 2; y < CHUNK_HEIGHT - 1; y++) {
                 if (getBlock(gx, y, gz) !== BLOCKS.WATER) continue;
 
-                // 1. fall straight down
+                // 1. fall straight down: only ever one block, so a waterfall steps
+                //    down over several ticks instead of teleporting to the bottom
                 if (getBlock(gx, y - 1, gz) === BLOCKS.AIR) {
-                    moves.push([gx, y, gz, gx, y - 1, gz]);
+                    adds.push([gx, y - 1, gz]);
                     continue;
                 }
 
-                // 2. spread sideways. The neighbour must be able to hold water at
-                //    this level or below - same level included, so water runs over
-                //    flat ground into a shallow channel.
+                // 2. spread sideways into a neighbour that can hold water at this
+                //    level. "Can hold" means the neighbour's floor is not higher
+                //    than the floor we are sitting on - that is what lets water run
+                //    across a flat bank into a one-block-deep channel, and what
+                //    stops it from climbing a hillside.
+                const nbr = [];
                 for (const [dx, dz] of FLOW_DIRS) {
                     const nx = gx + dx, nz = gz + dz;
-
-                    // already water at our level: nothing to do
-                    if (getBlock(nx, y, nz) === BLOCKS.WATER) continue;
                     if (getBlock(nx, y, nz) !== BLOCKS.AIR) continue;
+                    nbr.push([nx, nz]);
+                }
+                if (nbr.length === 0) continue;
 
-                    const nSupport = findSurfaceY(nx, nz);
+                const myFloor = findFloorY(gx, gz, y);
 
-                    if (nSupport < 0) {
-                        // open shaft: drop in
-                        moves.push([gx, y, gz, nx, y, nz]);
+                for (const [nx, nz] of nbr) {
+                    if (adds.length >= FLOW_BUDGET) break;
+                    const nFloor = findFloorY(nx, nz, y);
+
+                    // -1 means the neighbour has no floor at all within reach: a
+                    // shaft, so the water drops in rather than sitting at this level
+                    if (nFloor < 0) {
+                        adds.push([nx, y, nz]);
                         continue;
                     }
-
-                    // never climb: a neighbour whose floor is above our water
-                    // level stays dry
-                    if (nSupport >= y) continue;
-
-                    // its floor is lower, so the water settles one above it
-                    moves.push([gx, y, gz, nx, nSupport + 1, nz]);
+                    if (nFloor <= myFloor) adds.push([nx, y, nz]);
                 }
             }
         }
     }
 
-    if (moves.length === 0) return 0;
+    if (adds.length === 0) return 0;
 
-    // Apply: place the water at the destination, consume it at the source. Both
-    // halves run together so the volume is conserved.
-    let moved = 0;
-    for (const [fx, fy, fz, tx, ty, tz] of moves) {
-        if (moved >= FLOW_BUDGET) break;
-        if (getBlock(tx, ty, tz) !== BLOCKS.AIR) continue;
-        setBlockInternal(tx, ty, tz, BLOCKS.WATER);
-        setBlockInternal(fx, fy, fz, BLOCKS.AIR);
-        moved++;
+    let placed = 0;
+    for (const [x, y, z] of adds) {
+        if (placed >= FLOW_BUDGET) break;
+        if (getBlock(x, y, z) !== BLOCKS.AIR) continue;
+        setBlockInternal(x, y, z, BLOCKS.WATER);
+        placed++;
     }
 
-    if (moved > 0) {
-        // a moving chunk earns a fresh countdown
+    if (placed > 0) {
+        // a chunk that gained water earns a fresh countdown so it can settle fully
         flowCooldown.set(key, FLOW_SETTLE_STEPS);
 
-        // mark the chunk and its neighbours: spread crosses borders
         markChunkDirty(cx, cz);
         markChunkDirty(cx - 1, cz);
         markChunkDirty(cx + 1, cz);
         markChunkDirty(cx, cz - 1);
         markChunkDirty(cx, cz + 1);
     }
-    return moved;
+    return placed;
 }
 
 const FLOW_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -511,8 +519,10 @@ const FLOW_BUDGET = 64;
 
 // Highest solid block in a column, or -1 when the column is empty all the way
 // down (which means an open pit).
-function findSurfaceY(gx, gz) {
-    for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
+// Highest solid block at or below `fromY`, or -1 when the column is open down to
+// bedrock. Bounded by fromY because the flow only cares about the current level.
+function findFloorY(gx, gz, fromY) {
+    for (let y = Math.min(fromY, CHUNK_HEIGHT - 2); y >= 1; y--) {
         const b = getBlock(gx, y, gz);
         if (b === BLOCKS.AIR || b === BLOCKS.WATER) continue;
         return y;
