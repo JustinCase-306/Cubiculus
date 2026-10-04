@@ -9,6 +9,12 @@ export const WATER_LEVEL = 18;
 // Usable build height. CHUNK_HEIGHT is 64, so the ceiling sits a few blocks
 // below the top: that headroom is what lets a jungle tree (canopy +12) finish
 // without being truncated.
+// Hard ceiling on terrain height. CHUNK_HEIGHT is 64, so 63 is the last usable
+// voxel row. Kept separate from BUILD_MAX, which is where the rolloff starts.
+export const CEIL = 62;
+
+// Trees need MAX_CANOPY_HEIGHT blocks of headroom, so on a mountain the ground
+// cannot go above CEIL - 13 = 49. The rolloff is calibrated around that.
 export const BUILD_MAX = 60;
 
 // Tallest canopy any tree reaches above its trunk base. Jungle is the tallest at
@@ -307,9 +313,14 @@ export function getTerrainHeight(gx, gz, biome) {
     // in on high continentalness so lowlands stay walkable.
     const t = smoothstep(0.04, 0.40, cont);
     if (t > 0) {
-        const crest = ridged(gx, gz, 4, 2.0, 0.5, 0.0035);
-        h += t * 10 * (0.35 + crest * 0.65);
-        h += t * t * 24 * Math.pow(crest, 1.6);
+        // ~110 block wavelength with 5 octaves: a player sees several ridges and
+        // valleys rather than one smooth dome.
+        const crest = ridged(gx, gz, 5, 2.0, 0.48, 0.0092);
+        // A second, longer ridge set keeps whole mountain ranges connected.
+        const range = ridged(gx + 1300, gz - 700, 3, 2.0, 0.5, 0.0034);
+        h += t * 7 * (0.35 + crest * 0.65);
+        h += t * t * 13 * Math.pow(crest, 1.5);
+        h += t * t * t * 9 * range;
     }
 
     // Push genuine lowlands below the water line to carve out oceans/lakes.
@@ -335,16 +346,25 @@ export function getTerrainHeight(gx, gz, biome) {
 
     // Soft height ceiling.
     //
-    // A hard Math.min(CHUNK_HEIGHT - 3, h) slices every tall mountain flat at the
-    // same y, which produces a plateau of identically-height peaks. Compressing
-    // the excess asymptotically keeps every peak its own height while still
-    // staying inside the column.
-    if (h > BUILD_MAX) {
-        const over = h - BUILD_MAX;
-        h = BUILD_MAX + over / (1 + over * 0.28);
+    // A hard Math.min() slices every tall mountain flat at the same y, which is
+    // what produced the big grey plateaus. This rolls the terrain off gradually:
+    // everything below KNEE is untouched, the KNEE..CEIL band is compressed by a
+    // smoothstep, and only truly extreme peaks get a wide gentle tail above the
+    // ceiling. Peaks therefore keep distinct heights instead of piling up.
+    // A longer knee band means fewer columns reach the ceiling.
+    const KNEE = BUILD_MAX - 26;
+    if (h > KNEE) {
+        const span = CEIL - KNEE;
+        const u = Math.min(1, (h - KNEE) / span);
+        h = KNEE + span * smoothstep(0, 1, u);
+        if (h > CEIL) {
+            // tail: sqrt keeps the slope shallow so no two peaks tie
+            const over = h - CEIL;
+            h = CEIL + Math.sqrt(over) * 1.6;
+        }
     }
 
-    return Math.max(3, Math.min(BUILD_MAX, Math.floor(h)));
+    return Math.max(3, Math.min(CEIL, Math.floor(h)));
 }
 
 // Fast zero-allocation procedural height & biome sampler for distant LoD chunks
@@ -645,6 +665,11 @@ export function generateChunkData(cx, cz) {
                             // The threshold is jittered per column so the line
                             // snakes across the slope instead of forming a flat
                             // horizontal stripe.
+                            // Only mountains, badlands and highland taiga expose rock.
+                            // Beaches, dunes and swamps stay sandy even when steep.
+                            const rockyBiome = biome.name === 'MOUNTAINS' ||
+                                               biome.name === 'BADLANDS' ||
+                                               biome.name === 'TAIGA';
                             const snowLine = 50 + Math.round(
                                 simplex.noise2D(gx * 0.05, gz * 0.05) * 4
                             );
@@ -653,13 +678,12 @@ export function generateChunkData(cx, cz) {
                                 chunk[blockIdx] = (biome.name === 'SNOWY_TUNDRA') ? BLOCKS.GRAVEL : BLOCKS.SAND;
                             } else if (h >= snowLine) {
                                 chunk[blockIdx] = BLOCKS.SNOW;
-                            } else if (slope >= 3 && h >= 32) {
-                                // Cliff faces are bare rock, but only up in the hills.
-                                // Applying this at any altitude painted entire lowland
-                                // slopes grey.
-                                const rocky = biome.name === 'MOUNTAINS' || biome.name === 'BADLANDS';
-                                chunk[blockIdx] = rocky ? BLOCKS.STONE :
-                                    (((gx * 31 + gz * 43) >>> 0) % 5 === 0 ? BLOCKS.GRAVEL : BLOCKS.STONE);
+                            } else if (slope >= 3 && h >= 32 && rockyBiome) {
+                                // Cliff faces are bare rock, but only in rocky biomes.
+                                // Applying this everywhere put stone blocks in the
+                                // middle of sand beaches.
+                                chunk[blockIdx] = (((gx * 31 + gz * 43) >>> 0) % 5 === 0)
+                                    ? BLOCKS.GRAVEL : BLOCKS.STONE;
                             } else if (biome.name === 'MOUNTAINS') {
                                 if (h >= 42) {
                                     const isGravel = (((gx * 31 + gz * 43) >>> 0) % 7) === 0;
