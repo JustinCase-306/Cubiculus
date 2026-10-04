@@ -30,6 +30,23 @@ export const FACE_DIRS = [
     { dir: [0, 0, -1], norm: [0, 0, -1], light: 0.88, name: '-Z' }
 ];
 
+// How far a top face dips towards a neighbour that is one block lower.
+//
+// Half a block, not a full one: dropping the full block made our top coplanar with
+// the neighbour's top, and the two surfaces fought, punching holes in hillsides.
+// At half a block the remaining step is exactly what the neighbour's own side face
+// already covers, so the slope closes without any overlap.
+const SLOPE_DROP = 0.5;
+
+// Blocks whose top face can slope into a neighbour. Water is excluded on purpose:
+// it uses the Minecraft-style stepped levels instead, and plants have no top face
+// at all.
+function isOpaqueTop(type) {
+    if (type === BLOCKS.AIR || type === BLOCKS.WATER) return false;
+    if (isCrossShaped(type)) return false;
+    return !isTransparentBlock(type);
+}
+
 export const FACE_CORNERS = [
     // +X (right)
     [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]],
@@ -468,6 +485,7 @@ export function buildChunkMesh(cx, cz) {
                                                     // through it.
                                                     let topDrop = 0;
                                                     let sideDrop = 0;
+                                                    let dipXPos = 0, dipXNeg = 0, dipZPos = 0, dipZNeg = 0;
                                                     if (type === BLOCKS.WATER) {
                                                         // How much lower our own surface sits: 1/8 block per
                                                         // spread level.
@@ -510,6 +528,48 @@ export function buildChunkMesh(cx, cz) {
 
                                                     if (!emitFace) continue;
 
+                    // Sloped top edge.
+                    //
+                    // A flat face next to lower ground leaves a hard step. Dip the
+                    // edge that touches the lower neighbour so the two surfaces join
+                    // into a ramp instead of a staircase.
+                    if (f === 2 && isOpaqueTop(type)) {
+                        // A corner joins a neighbour that is exactly one block
+                        // lower: the column's top block sits at y-1 and the block
+                        // at our own level is air. Anything else keeps the edge.
+                        const oneStepDown = (dx, dz) => {
+                            let above, below;
+                            if (dx === 1) {
+                                above = lx < 15 ? chunkData[(y << 8) | (lz << 4) | (lx + 1)]
+                                                : (nXP ? nXP[(y << 8) | (lz << 4) | 0] : getBlock(gx + 1, y, gz));
+                                below = lx < 15 ? chunkData[((y - 1) << 8) | (lz << 4) | (lx + 1)]
+                                                : (nXP ? nXP[((y - 1) << 8) | (lz << 4) | 0] : getBlock(gx + 1, y - 1, gz));
+                            } else if (dx === -1) {
+                                above = lx > 0 ? chunkData[(y << 8) | (lz << 4) | (lx - 1)]
+                                                : (nXM ? nXM[(y << 8) | (lz << 4) | 15] : getBlock(gx - 1, y, gz));
+                                below = lx > 0 ? chunkData[((y - 1) << 8) | (lz << 4) | (lx - 1)]
+                                                : (nXM ? nXM[((y - 1) << 8) | (lz << 4) | 15] : getBlock(gx - 1, y - 1, gz));
+                            } else if (dz === 1) {
+                                above = lz < 15 ? chunkData[(y << 8) | ((lz + 1) << 4) | lx]
+                                                : (nZP ? nZP[(y << 8) | (lz << 4) | lx] : getBlock(gx, y, gz + 1));
+                                below = lz < 15 ? chunkData[((y - 1) << 8) | ((lz + 1) << 4) | lx]
+                                                : (nZP ? nZP[((y - 1) << 8) | (lz << 4) | lx] : getBlock(gx, y - 1, gz + 1));
+                            } else {
+                                above = lz > 0 ? chunkData[(y << 8) | ((lz - 1) << 4) | lx]
+                                                : (nZM ? nZM[(y << 8) | (15 << 4) | lx] : getBlock(gx, y, gz - 1));
+                                below = lz > 0 ? chunkData[((y - 1) << 8) | ((lz - 1) << 4) | lx]
+                                                : (nZM ? nZM[((y - 1) << 8) | (15 << 4) | lx] : getBlock(gx, y - 1, gz - 1));
+                            }
+                            // air at our level, solid one below -> exactly one step down
+                            return above === BLOCKS.AIR && isSolidBlock(below);
+                        };
+
+                        dipXPos = oneStepDown(1, 0) ? 1 : 0;
+                        dipXNeg = oneStepDown(-1, 0) ? 1 : 0;
+                        dipZPos = oneStepDown(0, 1) ? 1 : 0;
+                        dipZNeg = oneStepDown(0, -1) ? 1 : 0;
+                    }
+
                     // Atlas UV mapping
                     const tileIdx = faces[f];
                     const [u0, v0, u1, v1] = getTileUV(tileIdx);
@@ -528,7 +588,8 @@ export function buildChunkMesh(cx, cz) {
                         const baseV = tVerts;
                         // Corner 0
                         sTransPos[tPos++] = gx + corners[0][0];
-                        sTransPos[tPos++] = y + corners[0][1] - topDrop + (corners[0][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = y + corners[0][1] - topDrop + (corners[0][1] === 0 ? sideDrop : 0)
+                            - SLOPE_DROP * ((corners[0][2] === 1 ? dipZPos : dipZNeg) + (corners[0][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sTransPos[tPos++] = gz + corners[0][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v0;
@@ -537,7 +598,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 1
                         sTransPos[tPos++] = gx + corners[1][0];
-                        sTransPos[tPos++] = y + corners[1][1] - topDrop + (corners[1][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = y + corners[1][1] - topDrop + (corners[1][1] === 0 ? sideDrop : 0)
+                            - SLOPE_DROP * ((corners[1][2] === 1 ? dipZPos : dipZNeg) + (corners[1][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sTransPos[tPos++] = gz + corners[1][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v0;
@@ -546,7 +608,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 2
                         sTransPos[tPos++] = gx + corners[2][0];
-                        sTransPos[tPos++] = y + corners[2][1] - topDrop + (corners[2][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = y + corners[2][1] - topDrop + (corners[2][1] === 0 ? sideDrop : 0)
+                            - SLOPE_DROP * ((corners[2][2] === 1 ? dipZPos : dipZNeg) + (corners[2][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sTransPos[tPos++] = gz + corners[2][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v1;
@@ -555,7 +618,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 3
                         sTransPos[tPos++] = gx + corners[3][0];
-                        sTransPos[tPos++] = y + corners[3][1] - topDrop + (corners[3][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = y + corners[3][1] - topDrop + (corners[3][1] === 0 ? sideDrop : 0)
+                            - SLOPE_DROP * ((corners[3][2] === 1 ? dipZPos : dipZNeg) + (corners[3][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sTransPos[tPos++] = gz + corners[3][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v1;
@@ -575,7 +639,8 @@ export function buildChunkMesh(cx, cz) {
                         const baseV = oVerts;
                         // Corner 0
                         sOpaquePos[oPos++] = gx + corners[0][0];
-                        sOpaquePos[oPos++] = y + corners[0][1];
+                        sOpaquePos[oPos++] = y + corners[0][1]
+                            - SLOPE_DROP * ((corners[0][2] === 1 ? dipZPos : dipZNeg) + (corners[0][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sOpaquePos[oPos++] = gz + corners[0][2];
                         sOpaqueNorm[oNorm++] = normX; sOpaqueNorm[oNorm++] = normY; sOpaqueNorm[oNorm++] = normZ;
                         sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v0;
@@ -584,7 +649,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 1
                         sOpaquePos[oPos++] = gx + corners[1][0];
-                        sOpaquePos[oPos++] = y + corners[1][1];
+                        sOpaquePos[oPos++] = y + corners[1][1]
+                            - SLOPE_DROP * ((corners[1][2] === 1 ? dipZPos : dipZNeg) + (corners[1][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sOpaquePos[oPos++] = gz + corners[1][2];
                         sOpaqueNorm[oNorm++] = normX; sOpaqueNorm[oNorm++] = normY; sOpaqueNorm[oNorm++] = normZ;
                         sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v0;
@@ -593,7 +659,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 2
                         sOpaquePos[oPos++] = gx + corners[2][0];
-                        sOpaquePos[oPos++] = y + corners[2][1];
+                        sOpaquePos[oPos++] = y + corners[2][1]
+                            - SLOPE_DROP * ((corners[2][2] === 1 ? dipZPos : dipZNeg) + (corners[2][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sOpaquePos[oPos++] = gz + corners[2][2];
                         sOpaqueNorm[oNorm++] = normX; sOpaqueNorm[oNorm++] = normY; sOpaqueNorm[oNorm++] = normZ;
                         sOpaqueUv[oUv++] = u1; sOpaqueUv[oUv++] = v1;
@@ -602,7 +669,8 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 3
                         sOpaquePos[oPos++] = gx + corners[3][0];
-                        sOpaquePos[oPos++] = y + corners[3][1];
+                        sOpaquePos[oPos++] = y + corners[3][1]
+                            - SLOPE_DROP * ((corners[3][2] === 1 ? dipZPos : dipZNeg) + (corners[3][0] === 1 ? dipXPos : dipXNeg)) / 2;
                         sOpaquePos[oPos++] = gz + corners[3][2];
                         sOpaqueNorm[oNorm++] = normX; sOpaqueNorm[oNorm++] = normY; sOpaqueNorm[oNorm++] = normZ;
                         sOpaqueUv[oUv++] = u0; sOpaqueUv[oUv++] = v1;
