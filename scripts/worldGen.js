@@ -323,8 +323,28 @@ export function getTerrainHeight(gx, gz, biome) {
         h += t * t * t * 9 * range;
     }
 
-    // Push genuine lowlands below the water line to carve out oceans/lakes.
-    if (h < 16) h = 7 + (h - 7) * 0.5;
+    // Basins: push low ground down so oceans and lakes get a real floor. The
+    // threshold is the fixed water line, which is what keeps shorelines level.
+    if (h < WATER_LEVEL + 2) {
+        const depth = WATER_LEVEL + 2 - h;
+        h = WATER_LEVEL + 2 - depth * 1.35;
+    }
+
+    // Guarantee that every seed has water. Some seeds produced an entirely dry
+    // world because their noise never dipped below the water line, which made
+    // "water does not flow" impossible to fix from the flow code alone. A broad
+    // basin term, keyed off the local terrain trend rather than a fixed height,
+    // reliably sinks some region below the line.
+    const basin = fbm(gx - 2200, gz + 1600, 3, 2.0, 0.5, 0.0031);
+    if (basin < -0.34) {
+        // deep sea: scale with how far below the threshold we are
+        const k = (-0.34 - basin) / 0.66;
+        h -= 4 + k * 16;
+    } else if (basin < -0.20) {
+        // shallow shelf / big lake
+        const k = (-0.20 - basin) / 0.14;
+        h -= 1 + k * 3;
+    }
 
     // Mild per-biome material-aware tuning (continuous, small deltas only).
     if (biome.name === 'SWAMP') {
@@ -402,7 +422,12 @@ const FLOW_SETTLE_STEPS = 6;
 // Returns the number of blocks that moved.
 export function tickWaterFlow(cx, cz) {
     const key = `${cx},${cz}`;
-    const left = flowCooldown.get(key) || 0;
+    let left = flowCooldown.get(key);
+    if (left === undefined) {
+        // chunk exists but was generated before this bookkeeping existed
+        if (!generatedChunks.has(key)) return 0;
+        left = FLOW_SETTLE_STEPS;
+    }
     if (left <= 0) return 0;
     flowCooldown.set(key, left - 1);
 
@@ -571,6 +596,10 @@ export function generateChunkData(cx, cz) {
         return chunk;
     }
     generatedChunks.add(chunkKey);
+
+    // A freshly generated chunk is eligible for water settling. Without this the
+    // cooldown map stayed empty and tickWaterFlow() bailed out immediately.
+    flowCooldown.set(chunkKey, FLOW_SETTLE_STEPS);
 
     if (!chunk) {
         chunk = new Uint8Array(CHUNK_VOXELS);
