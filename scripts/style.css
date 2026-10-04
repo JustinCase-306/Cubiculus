@@ -1133,3 +1133,52 @@ body.liquid-glass-mode .mc-slot {
     z-index: 96;
     pointer-events: none;
 }
+/* Recipe book cards: the inputs mirror the 2x2 crafting grid so every card has
+   the same height and shows where an ingredient goes. */
+.mc-recipe-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.rec-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#recipe-book-list .rec-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 24px) !important;
+    gap: 2px;
+    width: auto;
+}
+
+#recipe-book-list .rec-cell {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#recipe-book-list .rec-cell canvas {
+    width: 24px !important;
+    height: 24px !important;
+    image-rendering: pixelated;
+}
+
+#recipe-book-list .rec-row {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
+#recipe-book-list .mc-recipe-card {
+    display: flex !important;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
