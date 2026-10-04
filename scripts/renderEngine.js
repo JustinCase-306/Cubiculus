@@ -456,12 +456,12 @@ export function buildChunkMesh(cx, cz) {
                                                         }
                                                     }
 
-                                                    // Water renders as a flat surface (only the +Y top face),
-                                                    // never as side walls. This removes the water texture from
-                                                    // chunk edges and shorelines in Pixel-style.
+                                                    // Water: hide the face against other water, but keep the side
+                                                    // faces against air. Drawing only the top face made a water
+                                                    // column invisible from the side, so you could see straight
+                                                    // through it.
                                                     if (type === BLOCKS.WATER) {
-                                                        if (neighbor === BLOCKS.WATER) emitFace = false; // hidden when above is water
-                                                        if (f !== 2) emitFace = false;                  // only draw the top (+Y) face
+                                                        if (neighbor === BLOCKS.WATER) emitFace = false;
                                                     }
 
                                                     if (!emitFace) continue;

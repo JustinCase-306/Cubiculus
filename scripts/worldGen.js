@@ -4,6 +4,12 @@ import { BLOCKS } from './blocks.js';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 64;
+// How many flow steps a chunk may still settle. Water needs several passes to
+// fall into a pit and fill it, so this is a countdown rather than a one-shot
+// latch; a chunk that stops changing drains to zero and is then left alone.
+const flowCooldown = new Map();
+const FLOW_SETTLE_STEPS = 6;
+
 export const WATER_LEVEL = 18;
 
 // Usable build height. CHUNK_HEIGHT is 64, so the ceiling sits a few blocks
@@ -122,6 +128,13 @@ export function setBlockInternal(x, y, z, type) {
         chunkDataMap.set(key, chunk);
     }
     chunk[(iy << 8) | ((iz & 15) << 4) | (ix & 15)] = type;
+
+    // Any edit can create a new hollow (digging beside water) or seal one off, so
+    // wake the flow up again. Without this a chunk drained its settling budget
+    // after a few steps and never reacted to the player digging next to a lake.
+    if (type === BLOCKS.WATER || type === BLOCKS.AIR) {
+        flowCooldown.set(key, FLOW_SETTLE_STEPS);
+    }
 }
 
 export function setBlock(x, y, z, type) {
@@ -412,12 +425,6 @@ export function getProceduralHeightAndBiome(gx, gz) {
 //   2. water spreads to the side when the block below that side is solid
 //   3. water only spreads downhill or level - never uphill
 // ---------------------------------------------------------------------------
-
-// How many flow steps a chunk may still settle. Water needs several passes to
-// fall into a pit and fill it, so this is a countdown rather than a one-shot
-// latch; a chunk that stops changing drains to zero and is then left alone.
-const flowCooldown = new Map();
-const FLOW_SETTLE_STEPS = 6;
 
 // Settles water in one chunk.
 //
