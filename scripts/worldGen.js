@@ -431,62 +431,72 @@ export function tickWaterFlow(cx, cz) {
     if (left <= 0) return 0;
     flowCooldown.set(key, left - 1);
 
-    let moved = 0;
-
-    // Operate on a scratch copy so a single pass cannot cascade arbitrarily far.
-    const pending = [];
+    // Collect the moves first, then apply them, so one pass cannot cascade.
+    // Each entry is [fromX, fromY, fromZ, toX, toY, toZ].
+    const moves = [];
+    const gx0 = cx * CHUNK_SIZE;
+    const gz0 = cz * CHUNK_SIZE;
 
     for (let x = 0; x < CHUNK_SIZE; x++) {
-        const gx = cx * CHUNK_SIZE + x;
         for (let z = 0; z < CHUNK_SIZE; z++) {
-            const gz = cz * CHUNK_SIZE + z;
+            const gx = gx0 + x, gz = gz0 + z;
 
             for (let y = 2; y < CHUNK_HEIGHT - 1; y++) {
                 if (getBlock(gx, y, gz) !== BLOCKS.WATER) continue;
 
                 // 1. fall straight down
                 if (getBlock(gx, y - 1, gz) === BLOCKS.AIR) {
-                    pending.push([gx, y - 1, gz, BLOCKS.WATER]);
+                    moves.push([gx, y, gz, gx, y - 1, gz]);
                     continue;
                 }
 
-                const below = getBlock(gx, y - 1, gz);
-                const canSpread = below !== BLOCKS.AIR && below !== BLOCKS.WATER;
+                // 2. spread sideways. The neighbour must be able to hold water at
+                //    this level or below - same level included, so water runs over
+                //    flat ground into a shallow channel.
+                for (const [dx, dz] of FLOW_DIRS) {
+                    const nx = gx + dx, nz = gz + dz;
 
-                // 3. only move to a side that is not higher
-                if (canSpread) {
-                    for (const [dx, dz] of FLOW_DIRS) {
-                        const nx = gx + dx, nz = gz + dz;
-                        if (getBlock(nx, y, nz) !== BLOCKS.AIR) continue;
+                    // already water at our level: nothing to do
+                    if (getBlock(nx, y, nz) === BLOCKS.WATER) continue;
+                    if (getBlock(nx, y, nz) !== BLOCKS.AIR) continue;
 
-                        const supportY = findSurfaceY(nx, nz);
-                        // no floor at all -> the side column is a hole, water pours in
-                        if (supportY < 0) {
-                            pending.push([nx, y, nz, BLOCKS.WATER]);
-                            continue;
-                        }
-                        // the target column's floor must be at or below our floor
-                        if (supportY <= y - 1) {
-                            pending.push([nx, y, nz, BLOCKS.WATER]);
-                        }
+                    const nSupport = findSurfaceY(nx, nz);
+
+                    if (nSupport < 0) {
+                        // open shaft: drop in
+                        moves.push([gx, y, gz, nx, y, nz]);
+                        continue;
                     }
+
+                    // never climb: a neighbour whose floor is above our water
+                    // level stays dry
+                    if (nSupport >= y) continue;
+
+                    // its floor is lower, so the water settles one above it
+                    moves.push([gx, y, gz, nx, nSupport + 1, nz]);
                 }
             }
         }
     }
 
-    for (const [x, y, z, id] of pending) {
-        if (getBlock(x, y, z) !== BLOCKS.AIR) continue;
-        setBlockInternal(x, y, z, id);
-        moved++;
+    if (moves.length === 0) return 0;
+
+    // Apply: place the water at the destination, consume it at the source. Both
+    // halves run together so the volume is conserved.
+    let moved = 0;
+    for (const [fx, fy, fz, tx, ty, tz] of moves) {
         if (moved >= FLOW_BUDGET) break;
+        if (getBlock(tx, ty, tz) !== BLOCKS.AIR) continue;
+        setBlockInternal(tx, ty, tz, BLOCKS.WATER);
+        setBlockInternal(fx, fy, fz, BLOCKS.AIR);
+        moved++;
     }
 
     if (moved > 0) {
-        // keep settling: a moving chunk earns a fresh countdown
+        // a moving chunk earns a fresh countdown
         flowCooldown.set(key, FLOW_SETTLE_STEPS);
 
-        // mark the chunk and its neighbours: spread can cross a border
+        // mark the chunk and its neighbours: spread crosses borders
         markChunkDirty(cx, cz);
         markChunkDirty(cx - 1, cz);
         markChunkDirty(cx + 1, cz);
