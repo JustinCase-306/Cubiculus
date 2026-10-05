@@ -605,8 +605,10 @@
     </div>
 
     <!-- External Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/PointerLockControls.js"></script>
+    <!-- Three.js comes from npm (0.184) and is imported by the modules. Loading
+         r128 from the CDN as well put two copies in memory, which is what caused
+         the "Multiple instances of Three.js" warning. PointerLockControls was
+         never used either - the pointer lock is hand-rolled in input.js. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
 
     <script type="module" src="/scripts/game.js"></script>

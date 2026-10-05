@@ -137,7 +137,9 @@ export function initRenderEngine(containerEl) {
 
     // Real Hardware Shadow Mapping Engine (PCF Soft Shadows)
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // PCFSoftShadowMap was removed in three 0.18x; it silently fell back to
+    // PCFShadowMap and logged a deprecation warning on every boot.
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.shadowMap.autoUpdate = true;
     containerEl.appendChild(renderer.domElement);
 
