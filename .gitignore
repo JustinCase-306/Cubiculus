@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# agent memory files - never belong in the repo (rule: see Portfolio README)
+.hermes.md
+SESSION_NOTES.md
+HERMES.md
