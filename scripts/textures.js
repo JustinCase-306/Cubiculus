@@ -432,12 +432,18 @@ function renderTileToCanvas(ctx, tileIndex, ox, oy) {
                 }
 
                 case TILES.WATER: {
-                    // Crystal cyan-blue translucent water with shimmering surface ripple
-                    const wave = Math.sin((px * 0.6 + py * 0.4) * 3.14) * 18;
-                    r = Math.floor(40 + wave * 0.3);
-                    g = Math.floor(118 + wave * 0.5);
-                    b = Math.floor(238 + wave * 0.4);
-                    a = 0.72;
+                    // Near-flat water, Minecraft-style.
+                    //
+                    // The old version used sin((px*0.6 + py*0.4) * 3.14), which put
+                    // 7.5 wave bands inside a single block. Tiled side by side those
+                    // beat against each other and produced the ribbed stripes across
+                    // every lake. There is no sinusoidal pattern here at all - just a
+                    // very low-amplitude per-pixel dither, which cannot form bands.
+                    const n = ((px * 5 + py * 11) % 7) - 3;   // -3..3
+                    r = 42 + n;
+                    g = 118 + n * 2;
+                    b = 232 + n * 2;
+                    a = 0.78;
                     break;
                 }
 

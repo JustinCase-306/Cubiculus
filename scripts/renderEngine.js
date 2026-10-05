@@ -516,7 +516,15 @@ export function buildChunkMesh(cx, cz) {
                     const [u0, v0, u1, v1] = getTileUV(tileIdx);
 
                     // 4-corner Ambient Occlusion
-                    const ao = getFaceAO(x, y, z, gx, y, gz, f);
+                    //
+                    // Never on water. Water counts as solid, so a water block sitting
+                    // next to other water had three of its four corners treated as
+                    // occluded and darkened to 0.52-0.84. Applied per block that drew a
+                    // 1-block grid of dark seams across every lake - the ribbed pattern.
+                    // Minecraft computes AO on opaque faces only.
+                    const ao = type === BLOCKS.WATER
+                        ? [3, 3, 3, 3]
+                        : getFaceAO(x, y, z, gx, y, gz, f);
                     const fd = FACE_DIRS[f];
                     const baseLight = fd.light;
                     const corners = FACE_CORNERS[f];
