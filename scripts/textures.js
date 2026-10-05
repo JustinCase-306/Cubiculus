@@ -439,7 +439,13 @@ function renderTileToCanvas(ctx, tileIndex, ox, oy) {
                     // beat against each other and produced the ribbed stripes across
                     // every lake. There is no sinusoidal pattern here at all - just a
                     // very low-amplitude per-pixel dither, which cannot form bands.
-                    const n = ((px * 5 + py * 11) % 7) - 3;   // -3..3
+                    // A 4x4 checker, not an arbitrary dither.
+                    //
+                    // The previous version used (px*5 + py*11) % 7. Its period is 7,
+                    // which does not divide 16, so the left edge of a tile did not
+                    // match its right edge and the seam showed as a bright line.
+                    // A period of 4 tiles seamlessly (16 % 4 === 0).
+                    const n = ((px & 3) === ((py & 3)) ? 1 : -1);
                     r = 42 + n;
                     g = 118 + n * 2;
                     b = 232 + n * 2;
