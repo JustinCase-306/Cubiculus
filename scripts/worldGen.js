@@ -37,10 +37,6 @@ function recordWaterBlock(x, y, z, level) {
     savedWaterBlocks.set(wlKey(Math.floor(x), Math.floor(y), Math.floor(z)), level);
 }
 
-export function forgetWaterBlock(x, y, z) {
-    savedWaterBlocks.delete(wlKey(Math.floor(x), Math.floor(y), Math.floor(z)));
-}
-
 // The payload for the save.
 //
 // Storing every water voxel costs ~125 kB for a normal lake (measured), and storing
@@ -97,10 +93,6 @@ export function applyWaterBlocks(data) {
     return sources;
 }
 
-export function clearWaterBlocks() {
-    savedWaterBlocks.clear();
-}
-
 function wlKey(x, y, z) {
     return `${x},${y},${z}`;
 }
@@ -116,33 +108,8 @@ function setWaterLevel(x, y, z, level) {
     waterLevels.set(wlKey(x, y, z), level);
 }
 
-// The water level map, for the save payload. Water levels live beside the voxel
-// data because the block byte in the Uint8Array is already fully used, so they
-// cannot be packed into modifiedWorldData without a wider value type.
-export function getWaterLevels() {
-    return waterLevels;
-}
 
-// Only levels that were explicitly set. The world generator never assigns levels,
-// so a save of an untouched world stays empty instead of carrying thousands of
-// zeroes.
-export function serializeWaterLevels() {
-    const out = {};
-    for (const [k, v] of waterLevels) {
-        if (v !== -1) out[k] = v;
-    }
-    return out;
-}
 
-// Apply a serialised level map. Called before the world is used so
-// waterSurfaceY() sees the right heights on the very first mesh build.
-export function applyWaterLevels(data) {
-    waterLevels.clear();
-    if (!data || typeof data !== 'object') return;
-    for (const [k, v] of Object.entries(data)) {
-        if (typeof v === 'number' && v >= 0) waterLevels.set(k, v);
-    }
-}
 
 // Dropping a water source (level 0) resets the spread.
 export function setWaterSource(x, y, z) {
@@ -349,12 +316,10 @@ export function resetWorldState() {
     dirtyChunks.clear();
 }
 
-export function loadWorldState(savedModifiedMap, savedWaterLevels) {
+export function loadWorldState(savedModifiedMap) {
     resetWorldState();
-    // Before the block loop: the chunk rebuild below marks chunks dirty, and the
-    // first mesh build may run before the next tick, so the levels have to be in
-    // place as early as possible.
-    applyWaterLevels(savedWaterLevels);
+    // the recorded water belonged to the world that just went away
+    savedWaterBlocks.clear();
     if (savedModifiedMap && savedModifiedMap instanceof Map) {
         modifiedWorldData = new Map(savedModifiedMap);
         for (const [key, type] of modifiedWorldData.entries()) {

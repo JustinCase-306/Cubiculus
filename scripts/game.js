@@ -256,11 +256,11 @@ function loadCurrentSlot(slotId) {
         } else {
             setWorldSeed(GameSettings.worldSeed);
         }
-        // The second argument restores the water levels; without it every
-        // surface snaps to the block ceiling and the spread is gone.
+        // Water comes back through applyWaterBlocks: the blocks are written directly
+        // and the sources are replayed through the flow, so the spread is rebuilt
+        // by the same code that created it.
         const waterSources = applyWaterBlocks(save.waterLevels);
-        loadWorldState(save.modifiedWorldMap, save.waterLevels);
-        // let the spread rebuild itself, exactly as it did when it was first made
+        loadWorldState(save.modifiedWorldMap);
         if (waterSources.length) {
             for (const [wx, wy, wz] of waterSources) setWaterSource(wx, wy, wz);
         }
