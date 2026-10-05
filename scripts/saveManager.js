@@ -42,7 +42,7 @@ export function getSlotInfo(slotId) {
             empty: false,
             lastPlayed: data.lastPlayed || 'Unbekannt',
             blockCount: data.world ? Object.keys(data.world).length : 0,
-            seed: data.seed || 'browsercraft'
+            seed: data.seed || 'cubiculus'
         };
     } catch (e) {
         return {
@@ -51,7 +51,7 @@ export function getSlotInfo(slotId) {
             empty: true,
             lastPlayed: '-',
             blockCount: 0,
-            seed: 'browsercraft'
+            seed: 'cubiculus'
         };
     }
 }
@@ -85,7 +85,7 @@ export function saveSlotWorld(slotId, payload) {
         inventory: inventory || null,
         playerPos: playerPos ? { x: playerPos.x, y: playerPos.y, z: playerPos.z } : null,
         playerRot: playerRot ? { x: playerRot.x, y: playerRot.y, z: playerRot.z ?? 0 } : null,
-        seed: seed || 'browsercraft'
+        seed: seed || 'cubiculus'
     };
 
     try {
@@ -119,7 +119,7 @@ export function loadSlotWorld(slotId) {
             inventory: parsed.inventory || null,
             playerPos: parsed.playerPos || null,
             playerRot: parsed.playerRot || null,
-            seed: parsed.seed || 'browsercraft'
+            seed: parsed.seed || 'cubiculus'
         };
     } catch (e) {
         console.error("Error parsing save slot:", e);
