@@ -1243,7 +1243,7 @@ body.liquid-glass-mode .mc-slot {
     display: none;
     position: fixed;
     right: calc(14px + env(safe-area-inset-right, 0px));
-    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
     display: none;
     grid-template-columns: repeat(2, auto);
     gap: 12px;
@@ -1272,10 +1272,11 @@ body.liquid-glass-mode .mc-slot {
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* Inventory sits top-right, away from the stick and the look area. */
+/* Inventory sits below the debug bar on the right, clear of the look area and
+   clear of the hotbar at the bottom. */
 #touch-inv {
     position: fixed;
-    top: calc(84px + env(safe-area-inset-top, 0px));
+    top: calc(52px + env(safe-area-inset-top, 0px));
     right: calc(14px + env(safe-area-inset-right, 0px));
     width: 58px;
     height: 58px;

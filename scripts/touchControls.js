@@ -97,6 +97,8 @@ export function initTouchControls(opts) {
     state.onPlace = opts.onPlace || null;
     state.onOpenInventory = opts.onOpenInventory || null;
 
+    // Guard both: a desktop browser has no touch, and if the renderer has not
+    // created its canvas yet there is nothing to attach listeners to.
     if (!isTouchDevice() || !canvas) {
         return { enabled: false, destroy() {} };
     }

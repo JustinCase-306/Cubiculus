@@ -52,6 +52,12 @@ import {
 } from './ui/keybinds.js';
 import { initChat } from './ui/chat.js';
 
+// Touch controls. touchHandle stays null on desktop; touchActive is the cheap flag
+// the movement branch checks every frame. Must be declared before initGame runs,
+// which assigns to them further down.
+let touchHandle = null;
+let touchActive = false;
+
 let lastFrameTime = performance.now();
 
 // Camera zoom state (FOV): 75 (default) down to 18 (max zoom-in)
@@ -151,7 +157,10 @@ function initGame() {
     // Touch controls. Registered only on a device that reports touch, so a desktop
     // player gets no listeners and no UI at all.
     touchHandle = initTouchControls({
-        canvas,
+        // The canvas is the renderer's DOM element. game.js never had a binding
+        // named `canvas`; referencing one threw a ReferenceError that aborted
+        // initGame, so the render loop never started and the screen stayed black.
+        canvas: renderer ? renderer.domElement : null,
         keys,
         mouseState,
         getYaw: () => yaw,
@@ -350,11 +359,6 @@ function setupUI() {
 const WATER_FLOW_INTERVAL = 0.55;      // seconds between flow steps
 const WATER_FLOW_CHUNKS_PER_TICK = 1; // chunks touched per step
 let waterFlowAccum = 0;
-
-// Touch controls. touchHandle stays null on desktop; touchActive is the cheap flag
-// the movement branch checks every frame.
-let touchHandle = null;
-let touchActive = false;
 
 function gameLoop(now) {
     requestAnimationFrame(gameLoop);
