@@ -432,24 +432,34 @@ function renderTileToCanvas(ctx, tileIndex, ox, oy) {
                 }
 
                 case TILES.WATER: {
-                    // Near-flat water, Minecraft-style.
+                    // Near-flat water, matched against the real water_still.png.
                     //
-                    // The old version used sin((px*0.6 + py*0.4) * 3.14), which put
-                    // 7.5 wave bands inside a single block. Tiled side by side those
-                    // beat against each other and produced the ribbed stripes across
-                    // every lake. There is no sinusoidal pattern here at all - just a
-                    // very low-amplitude per-pixel dither, which cannot form bands.
-                    // A 4x4 checker, not an arbitrary dither.
+                    // Measured reference: red span 3, green span 3, blue span 4 -
+                    // a tile that is visually one colour.
                     //
-                    // The previous version used (px*5 + py*11) % 7. Its period is 7,
-                    // which does not divide 16, so the left edge of a tile did not
-                    // match its right edge and the seam showed as a bright line.
-                    // A period of 4 tiles seamlessly (16 % 4 === 0).
-                    const n = ((px & 3) === ((py & 3)) ? 1 : -1);
-                    r = 42 + n;
-                    g = 118 + n * 2;
-                    b = 232 + n * 2;
-                    a = 0.78;
+                    // Three earlier attempts each put a visible grid on the surface:
+                    //   sin((px*0.6 + py*0.4) * 3.14) -> 7.5 wave bands per block
+                    //   (px*5 + py*11) % 7             -> period 7, seam at the edge
+                    //   ((px & 3) === (py & 3))       -> hard 2x2 checker
+                    //
+                    // The amplitude was never the problem, the STRUCTURE was. A
+                    // checker paints every 2x2 block identically, so tiling the
+                    // texture draws a grid - and that grid is what made each 1/8
+                    // water step read as a stair.
+                    //
+                    // So: one flat colour plus about one in ten pixels lifted by a
+                    // single step. The lift is scattered, so no 2x2 block repeats and
+                    // nothing lines up. The steps stay visible only through the
+                    // transparency, exactly like the reference.
+                    let hsh = (px * 374761393 + py * 668265263) | 0;
+                    hsh = (hsh ^ (hsh >>> 13)) * 1274126177 | 0;
+                    hsh = hsh ^ (hsh >>> 16);
+                    const lift = ((hsh >>> 12) % 100) < 11 ? 2 : 0;
+
+                    r = 45 + lift;
+                    g = 110 + lift;
+                    b = 212 + lift;
+                    a = 0.62;
                     break;
                 }
 
