@@ -16,6 +16,15 @@ export let pitch = 0;
 export function setYaw(y) { yaw = y; }
 export function setPitch(p) { pitch = p; }
 
+// Relative look, used by the touch layer. yaw/pitch are exported bindings, so an
+// importing module cannot assign to them - rollup rejects that outright. Routing
+// the delta through here keeps the clamping in one place.
+export function applyLookDelta(dYaw, dPitch) {
+    yaw += dYaw;
+    pitch += dPitch;
+    pitch = Math.max(-Math.PI * 0.49, Math.min(Math.PI * 0.49, pitch));
+}
+
 export const keys = {
     forward: false,
     backward: false,

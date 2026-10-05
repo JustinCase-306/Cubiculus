@@ -31,8 +31,10 @@ import {
     getTargetVoxel, handleMining, stopMining, handleBlockPlacement, dropHeldItem
 } from './interaction.js';
 import {
-    initInput, isGameActive, keys, yaw, pitch, mouseState, requestGameLock
+    initInput, isGameActive, keys, yaw, pitch, mouseState, requestGameLock,
+    applyLookDelta
 } from './input.js';
+import { initTouchControls, getTouchMoveAxis, isTouchDevice } from './touchControls.js';
 import {
     updateHUD, updateUnderwaterVisuals, toggleF3Overlay
 } from './ui/hud.js';
@@ -145,6 +147,37 @@ function initGame() {
             setZoomLevel(Math.max(18, Math.min(75, newZoom)));
         }
     });
+
+    // Touch controls. Registered only on a device that reports touch, so a desktop
+    // player gets no listeners and no UI at all.
+    touchHandle = initTouchControls({
+        canvas,
+        keys,
+        mouseState,
+        getYaw: () => yaw,
+        // yaw/pitch are exported bindings from input.js and cannot be assigned
+        // from here - rollup rejects that. applyLookDelta applies the relative
+        // delta and does the clamping.
+        setLook: (dYaw, dPitch) => applyLookDelta(dYaw, dPitch),
+        stickBaseEl: document.getElementById('touch-stick-base'),
+        stickKnobEl: document.getElementById('touch-stick-knob'),
+        jumpBtn: document.getElementById('touch-jump'),
+        sprintBtn: document.getElementById('touch-sprint'),
+        inventoryBtn: document.getElementById('touch-inv'),
+        onPlace: () => {
+            const t = getTargetVoxel(camera, player, getBlock);
+            const held = getHeldItem();
+            handleBlockPlacement(t, player, held, () => {
+                held.count--;
+                if (held.count <= 0) {
+                    inventory[selectedHotbarSlot - 1] = { type: BLOCKS.AIR, count: 0 };
+                }
+                updateInventoryUI();
+            });
+        },
+        onOpenInventory: () => toggleInventory()
+    });
+    touchActive = touchHandle.enabled;
 
     // Load active slot save
     const activeSlot = getActiveSlotId();
@@ -318,6 +351,11 @@ const WATER_FLOW_INTERVAL = 0.55;      // seconds between flow steps
 const WATER_FLOW_CHUNKS_PER_TICK = 1; // chunks touched per step
 let waterFlowAccum = 0;
 
+// Touch controls. touchHandle stays null on desktop; touchActive is the cheap flag
+// the movement branch checks every frame.
+let touchHandle = null;
+let touchActive = false;
+
 function gameLoop(now) {
     requestAnimationFrame(gameLoop);
 
@@ -331,6 +369,16 @@ function gameLoop(now) {
         if (keys.backward) moveDir.z += 1;
         if (keys.left) moveDir.x -= 1;
         if (keys.right) moveDir.x += 1;
+
+        // The virtual stick writes the same axes the WASD keys do, so it feeds the
+        // physics step directly instead of faking key events.
+        if (touchActive) {
+            const t = getTouchMoveAxis();
+            if (t && (t.x !== 0 || t.y !== 0)) {
+                moveDir.x += t.x;
+                moveDir.z -= t.y;
+            }
+        }
 
         if (moveDir.lengthSq() > 0) {
             moveDir.normalize();

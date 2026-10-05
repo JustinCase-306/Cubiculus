@@ -1182,3 +1182,169 @@ body.liquid-glass-mode .mc-slot {
     gap: 4px;
     align-items: flex-start;
 }
+/* ------------------------------------------------------------------ *
+ * Touch controls
+ *
+ * Hidden by default so a desktop player never sees them. The
+ * `touch-mode` class is added by touchControls.js, and only when the
+ * device actually reports touch.
+ * ------------------------------------------------------------------ */
+
+#touch-ui {
+    display: none;
+}
+
+.touch-mode #touch-ui {
+    display: block;
+}
+
+/* Nothing may scroll, zoom or select under a thumb. */
+.touch-mode body {
+    touch-action: none;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.touch-mode canvas {
+    touch-action: none;
+}
+
+/* The stick only appears where the thumb went down. */
+#touch-stick-base {
+    display: none;
+    position: fixed;
+    width: 132px;
+    height: 132px;
+    margin-left: -66px;
+    margin-top: -66px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.22);
+    pointer-events: none;
+    z-index: 60;
+}
+
+#touch-stick-knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 56px;
+    height: 56px;
+    margin-left: -28px;
+    margin-top: -28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+#touch-buttons {
+    display: none;
+    position: fixed;
+    right: calc(14px + env(safe-area-inset-right, 0px));
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    display: none;
+    grid-template-columns: repeat(2, auto);
+    gap: 12px;
+    z-index: 61;
+}
+
+.touch-mode #touch-buttons {
+    display: grid;
+}
+
+#touch-buttons button {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.42);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 24px;
+    font-family: inherit;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#touch-buttons button:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Inventory sits top-right, away from the stick and the look area. */
+#touch-inv {
+    position: fixed;
+    top: calc(84px + env(safe-area-inset-top, 0px));
+    right: calc(14px + env(safe-area-inset-right, 0px));
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.42);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 22px;
+    z-index: 62;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.touch-mode #touch-inv {
+    display: block;
+}
+
+/* A short reminder that fades, so a new player finds the controls. */
+#touch-hint {
+    position: fixed;
+    left: 50%;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 63;
+}
+
+.touch-mode #touch-hint {
+    display: block;
+    animation: touch-hint-fade 9s forwards;
+}
+
+@keyframes touch-hint-fade {
+    0%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Phones are narrow: shrink the hotbar so it does not eat the screen. */
+@media (max-width: 560px) {
+    #hotbar {
+        gap: 2px;
+    }
+
+    #hotbar .slot {
+        width: 34px;
+        height: 34px;
+    }
+
+    #touch-hint {
+        font-size: 10px;
+        max-width: 74vw;
+    }
+}
+
+/* Landscape phones: keep the HUD clear of the thumb zones. */
+@media (max-height: 460px) {
+    #touch-buttons {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #touch-jump, #touch-sprint, #touch-inv {
+        width: 54px;
+        height: 54px;
+        font-size: 20px;
+    }
+}

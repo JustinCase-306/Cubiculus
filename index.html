@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cubiculus // 3D Voxel Sandbox</title>
     <meta name="description" content="Cubiculus 3D Voxel Sandbox mit authentischer Minecraft Java Edition Benutzeroberfläche, Hotbar, Inventar, Crafting, Seeds und flüssiger 60 FPS Grafik.">
     <meta property="og:title" content="Cubiculus // 3D Voxel Sandbox">
@@ -192,6 +192,17 @@
             <div class="slot" data-id="7" data-key="7"><div class="qty" id="qty-6"></div><canvas id="icon-6"></canvas></div>
             <div class="slot" data-id="8" data-key="8"><div class="qty" id="qty-7"></div><canvas id="icon-7"></canvas></div>
             <div class="slot" data-id="9" data-key="9"><div class="qty" id="qty-8"></div><canvas id="icon-8"></canvas></div>
+        </div>
+
+        <!-- Touch controls: only visible when the device reports touch -->
+        <div id="touch-ui" aria-hidden="true">
+            <div id="touch-stick-base"><div id="touch-stick-knob"></div></div>
+            <div id="touch-buttons">
+                <button id="touch-inv" data-touch-ui type="button" aria-label="Inventar">▤</button>
+                <button id="touch-sprint" data-touch-ui type="button" aria-label="Sprint">»</button>
+                <button id="touch-jump" data-touch-ui type="button" aria-label="Springen">▲</button>
+            </div>
+            <div id="touch-hint">Links: Stick &middot; Rechts: Wischen zum Umsehen, Tippen zum Bauen, Halten zum Abbauen</div>
         </div>
 
     </div>
