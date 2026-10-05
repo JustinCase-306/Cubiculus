@@ -40,13 +40,15 @@ function waterCornerHeight(LX, y, LZ) {
     for (let dx = -1; dx <= 0; dx++) {
         for (let dz = -1; dz <= 0; dz++) {
             const nx = LX + dx, nz = LZ + dz;
-            const h = getBlock(nx, y, nz) === BLOCKS.WATER
-                ? waterSurfaceY(nx, y, nz)
-                : y + 1;                 // a solid neighbour sits higher
+            if (getBlock(nx, y, nz) !== BLOCKS.WATER) continue;
+            const h = waterSurfaceY(nx, y, nz);
             if (h < lowest) lowest = h;
         }
     }
-    return lowest;
+    // No water touching this point at all: it lies outside the surface, on the
+    // solid side of a shore. Fall back to our own block ceiling there, which is
+    // what the neighbouring ground draws anyway.
+    return lowest === Infinity ? y + 1 : lowest;
 }
 
 export const FACE_DIRS = [
@@ -501,6 +503,10 @@ export function buildChunkMesh(cx, cz) {
                                                     // removing.
                                                     let topDrop = 0;
                                                     let sideDrop = 0;
+                                                    // Height of our own surface, used as the top edge of a side
+                                                    // face between two water blocks. null when there is no such
+                                                    // face, in which case the corners fall back below.
+                                                    let sideTopY = null;
                                                     const waterCornerY = [0, 0, 0, 0];
                                                     let waterCornersSet = false;
                                                     if (type === BLOCKS.WATER) {
@@ -519,6 +525,9 @@ export function buildChunkMesh(cx, cz) {
                                                                 emitFace = false;
                                                             } else {
                                                                 sideDrop = mine - theirs;
+                                                                // the face reaches from the neighbour's surface up to
+                                                                // ours - no further
+                                                                sideTopY = mine;
                                                             }
                                                         }
                                                         topDrop = 0;
@@ -559,8 +568,9 @@ export function buildChunkMesh(cx, cz) {
                         const baseV = tVerts;
                         // Corner 0
                         sTransPos[tPos++] = gx + corners[0][0];
-                        sTransPos[tPos++] = waterCornersSet ? waterCornerY[0]
-                            : y + corners[0][1] - topDrop + (corners[0][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = sideTopY !== null ? (corners[0][1] === 0 ? y + sideDrop : sideTopY)
+                            : (waterCornersSet ? waterCornerY[0]
+                            : y + corners[0][1] - topDrop + (corners[0][1] === 0 ? sideDrop : 0));
                         sTransPos[tPos++] = gz + corners[0][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v0;
@@ -569,8 +579,9 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 1
                         sTransPos[tPos++] = gx + corners[1][0];
-                        sTransPos[tPos++] = waterCornersSet ? waterCornerY[1]
-                            : y + corners[1][1] - topDrop + (corners[1][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = sideTopY !== null ? (corners[1][1] === 0 ? y + sideDrop : sideTopY)
+                            : (waterCornersSet ? waterCornerY[1]
+                            : y + corners[1][1] - topDrop + (corners[1][1] === 0 ? sideDrop : 0));
                         sTransPos[tPos++] = gz + corners[1][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v0;
@@ -579,8 +590,9 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 2
                         sTransPos[tPos++] = gx + corners[2][0];
-                        sTransPos[tPos++] = waterCornersSet ? waterCornerY[2]
-                            : y + corners[2][1] - topDrop + (corners[2][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = sideTopY !== null ? (corners[2][1] === 0 ? y + sideDrop : sideTopY)
+                            : (waterCornersSet ? waterCornerY[2]
+                            : y + corners[2][1] - topDrop + (corners[2][1] === 0 ? sideDrop : 0));
                         sTransPos[tPos++] = gz + corners[2][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u1; sTransUv[tUv++] = v1;
@@ -589,8 +601,9 @@ export function buildChunkMesh(cx, cz) {
 
                         // Corner 3
                         sTransPos[tPos++] = gx + corners[3][0];
-                        sTransPos[tPos++] = waterCornersSet ? waterCornerY[3]
-                            : y + corners[3][1] - topDrop + (corners[3][1] === 0 ? sideDrop : 0);
+                        sTransPos[tPos++] = sideTopY !== null ? (corners[3][1] === 0 ? y + sideDrop : sideTopY)
+                            : (waterCornersSet ? waterCornerY[3]
+                            : y + corners[3][1] - topDrop + (corners[3][1] === 0 ? sideDrop : 0));
                         sTransPos[tPos++] = gz + corners[3][2];
                         sTransNorm[tNorm++] = normX; sTransNorm[tNorm++] = normY; sTransNorm[tNorm++] = normZ;
                         sTransUv[tUv++] = u0; sTransUv[tUv++] = v1;
