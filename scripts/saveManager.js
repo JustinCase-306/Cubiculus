@@ -62,7 +62,7 @@ export function listAllSlots() {
 
 // Save world data into a slot
 export function saveSlotWorld(slotId, payload) {
-    const { modifiedWorldMap, inventory, playerPos, playerRot, worldName, seed } = payload;
+    const { modifiedWorldMap, inventory, playerPos, playerRot, worldName, seed, waterLevels } = payload;
     const existing = getSlotInfo(slotId);
     const now = new Date();
     const dateStr = now.toLocaleDateString('de-DE') + ' ' + now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -85,7 +85,10 @@ export function saveSlotWorld(slotId, payload) {
         inventory: inventory || null,
         playerPos: playerPos ? { x: playerPos.x, y: playerPos.y, z: playerPos.z } : null,
         playerRot: playerRot ? { x: playerRot.x, y: playerRot.y, z: playerRot.z ?? 0 } : null,
-        seed: seed || 'cubiculus'
+        seed: seed || 'cubiculus',
+        // Water levels, otherwise every surface snaps back to the block ceiling on
+        // the next load. Empty for an untouched world, so this costs nothing.
+        waterLevels: waterLevels && Object.keys(waterLevels).length ? waterLevels : null
     };
 
     try {

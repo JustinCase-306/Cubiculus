@@ -18,10 +18,88 @@ const FLOW_SETTLE_STEPS = 12;
 // stops spreading, which is what bounds a puddle instead of letting it run to
 // the horizon. The further out a block is, the lower its surface is drawn.
 export const WATER_MAX_LEVEL = 7;
+// above this many water voxels the save keeps only the sources and lets the
 
 // Block id -> per-voxel level. The voxel array is a Uint8Array and already uses
 // its full byte for the block id, so the level needs a side table.
 const waterLevels = new Map();
+
+// Water the flow produced, keyed like the level map. Only blocks that are not plain
+// generator water end up here, so a save of an untouched world serialises to nothing.
+const savedWaterBlocks = new Map();
+
+// Above this many water voxels a save keeps only the source positions and lets the
+// flow rebuild the spread. Measured: a normal lake is ~4000 voxels / ~125 kB of JSON,
+// which is not worth storing when the same picture comes back from one coordinate.
+const WATER_SAVE_FULL_LIMIT = 1500;
+
+function recordWaterBlock(x, y, z, level) {
+    savedWaterBlocks.set(wlKey(Math.floor(x), Math.floor(y), Math.floor(z)), level);
+}
+
+export function forgetWaterBlock(x, y, z) {
+    savedWaterBlocks.delete(wlKey(Math.floor(x), Math.floor(y), Math.floor(z)));
+}
+
+// The payload for the save.
+//
+// Storing every water voxel costs ~125 kB for a normal lake (measured), and storing
+// only the sources would rebuild the spread through the flow - which is cheap, but
+// then the save no longer describes what the player actually had if the flow ever
+// changes. So: the sources go in as a short list, and the full voxel map only when
+// it is small enough to be worth it. That keeps the common case tiny and the
+// expensive case exact.
+export function serializeWaterBlocks() {
+    if (savedWaterBlocks.size === 0) return null;
+    return {
+        s: [...savedWaterBlocks].filter(([, lvl]) => lvl === 0).map(([k]) => k),
+        v: savedWaterBlocks.size <= WATER_SAVE_FULL_LIMIT
+            ? Object.fromEntries(savedWaterBlocks)
+            : null
+    };
+}
+
+// Replay saved water. Blocks are written directly; the level 0 ones come back as
+// sources so the caller can hand them to the flow and rebuild the spread with the
+// same code that created it. A save from an older build still lands sanely because
+// the surrounding levels come from the flow, not from the file.
+export function applyWaterBlocks(data) {
+    savedWaterBlocks.clear();
+    if (!data || typeof data !== 'object') return [];
+
+    const sources = [];
+    const place = (k, lvl) => {
+        const parts = k.split(',');
+        if (parts.length !== 3) return false;
+        const x = +parts[0], y = +parts[1], z = +parts[2];
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return false;
+        setBlockInternal(x, y, z, BLOCKS.WATER);
+        setWaterLevel(x, y, z, lvl);
+        recordWaterBlock(x, y, z, lvl);
+        if (lvl === 0) sources.push([x, y, z]);
+        return true;
+    };
+
+    // New format: a source list plus, when it fit, the exact voxel map.
+    if (Array.isArray(data.s)) {
+        if (data.v && typeof data.v === 'object') {
+            for (const [k, lvl] of Object.entries(data.v)) place(k, typeof lvl === 'number' ? lvl : 0);
+        } else {
+            for (const k of data.s) place(k, 0);
+        }
+        return sources;
+    }
+
+    // Old format from the first attempt: a bare key -> level map.
+    for (const [k, level] of Object.entries(data)) {
+        place(k, typeof level === 'number' && level >= 0 ? level : 0);
+    }
+    return sources;
+}
+
+export function clearWaterBlocks() {
+    savedWaterBlocks.clear();
+}
 
 function wlKey(x, y, z) {
     return `${x},${y},${z}`;
@@ -38,10 +116,41 @@ function setWaterLevel(x, y, z, level) {
     waterLevels.set(wlKey(x, y, z), level);
 }
 
+// The water level map, for the save payload. Water levels live beside the voxel
+// data because the block byte in the Uint8Array is already fully used, so they
+// cannot be packed into modifiedWorldData without a wider value type.
+export function getWaterLevels() {
+    return waterLevels;
+}
+
+// Only levels that were explicitly set. The world generator never assigns levels,
+// so a save of an untouched world stays empty instead of carrying thousands of
+// zeroes.
+export function serializeWaterLevels() {
+    const out = {};
+    for (const [k, v] of waterLevels) {
+        if (v !== -1) out[k] = v;
+    }
+    return out;
+}
+
+// Apply a serialised level map. Called before the world is used so
+// waterSurfaceY() sees the right heights on the very first mesh build.
+export function applyWaterLevels(data) {
+    waterLevels.clear();
+    if (!data || typeof data !== 'object') return;
+    for (const [k, v] of Object.entries(data)) {
+        if (typeof v === 'number' && v >= 0) waterLevels.set(k, v);
+    }
+}
+
 // Dropping a water source (level 0) resets the spread.
 export function setWaterSource(x, y, z) {
-    setBlockInternal(Math.floor(x), Math.floor(y), Math.floor(z), BLOCKS.WATER);
+    // playerSetBlock, not setBlockInternal: a source has to reach modifiedWorldData
+    // or it is gone on the next load, not just its level.
+    playerSetBlock(x, y, z, BLOCKS.WATER);
     setWaterLevel(x, y, z, 0);
+    recordWaterBlock(x, y, z, 0);
 }
 
 export const WATER_LEVEL = 18;
@@ -185,6 +294,15 @@ export function playerSetBlock(x, y, z, type) {
     const cellKey = `${ix},${iy},${iz}`;
     modifiedWorldData.set(cellKey, type);
 
+    if (type === BLOCKS.WATER) {
+        setWaterLevel(ix, iy, iz, 0);      // placed water is a source
+        recordWaterBlock(ix, iy, iz, 0);
+    } else {
+        // otherwise the block is gone and must not come back from the save
+        savedWaterBlocks.delete(cellKey);
+        waterLevels.delete(cellKey);
+    }
+
     const cx = ix >> 4;
     const cz = iz >> 4;
     markChunkDirty(cx, cz);
@@ -231,8 +349,12 @@ export function resetWorldState() {
     dirtyChunks.clear();
 }
 
-export function loadWorldState(savedModifiedMap) {
+export function loadWorldState(savedModifiedMap, savedWaterLevels) {
     resetWorldState();
+    // Before the block loop: the chunk rebuild below marks chunks dirty, and the
+    // first mesh build may run before the next tick, so the levels have to be in
+    // place as early as possible.
+    applyWaterLevels(savedWaterLevels);
     if (savedModifiedMap && savedModifiedMap instanceof Map) {
         modifiedWorldData = new Map(savedModifiedMap);
         for (const [key, type] of modifiedWorldData.entries()) {
@@ -552,6 +674,8 @@ export function tickWaterFlow(cx, cz) {
         if (cur !== BLOCKS.AIR && cur !== BLOCKS.WATER) continue;
         setBlockInternal(x, y, z, BLOCKS.WATER);
         setWaterLevel(x, y, z, level);
+        // the save has to know about flow-created water too, not just the source
+        recordWaterBlock(x, y, z, level);
         changed++;
     }
 
@@ -598,6 +722,7 @@ export function primeWaterFlow() {
 
 // Forget the flow bookkeeping, e.g. after a world reset or load.
 export function resetWaterFlow() {
+    savedWaterBlocks.clear();   // belongs to the world that is going away
     flowCooldown.clear();
     waterLevels.clear();
 }

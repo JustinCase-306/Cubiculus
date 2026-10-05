@@ -9,6 +9,7 @@ import {
 import {
     modifiedWorldData, getBlock, resetWorldState,
     loadWorldState, setSimplex, setWorldSeed, getWorldSeed, findSafeSpawn,
+    serializeWaterBlocks, applyWaterBlocks,
     tickWaterFlow, resetWaterFlow
 } from './worldGen.js';
 import { player, updatePlayerPhysics, checkVoxelCollision } from './physics.js';
@@ -255,7 +256,14 @@ function loadCurrentSlot(slotId) {
         } else {
             setWorldSeed(GameSettings.worldSeed);
         }
-        loadWorldState(save.modifiedWorldMap);
+        // The second argument restores the water levels; without it every
+        // surface snaps to the block ceiling and the spread is gone.
+        const waterSources = applyWaterBlocks(save.waterLevels);
+        loadWorldState(save.modifiedWorldMap, save.waterLevels);
+        // let the spread rebuild itself, exactly as it did when it was first made
+        if (waterSources.length) {
+            for (const [wx, wy, wz] of waterSources) setWaterSource(wx, wy, wz);
+        }
         if (save.inventory) setInventoryData(save.inventory);
         if (save.playerPos) {
             player.pos.set(save.playerPos.x, save.playerPos.y, save.playerPos.z);
@@ -288,7 +296,8 @@ function saveCurrentGame() {
         inventory: inventory,
         playerPos: player.pos,
         playerRot: { x: pitch, y: yaw },
-        seed: getWorldSeed()
+        seed: getWorldSeed(),
+        waterLevels: serializeWaterBlocks()
     });
 
     const indicator = document.getElementById('save-indicator');
