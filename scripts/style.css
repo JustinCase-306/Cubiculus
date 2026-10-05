@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BROWSER CRAFT // AUTHENTIC MINECRAFT JAVA EDITION DESIGN SYSTEM
+   CUBICULUS // AUTHENTIC MINECRAFT JAVA EDITION DESIGN SYSTEM
    ========================================================================== */
 
 :root {
@@ -1347,5 +1347,107 @@ body.liquid-glass-mode .mc-slot {
         width: 54px;
         height: 54px;
         font-size: 20px;
+    }
+}/* ------------------------------------------------------------------ *
+ * Mobile layout
+ *
+ * Two problems this fixes, both seen on a real phone:
+ *
+ * 1. The page was not fullscreen. On a phone the browser chrome and the
+ *    dynamic URL bar eat the bottom, and `100vh` reports the height with
+ *    the bar hidden, so the canvas ended up taller than the visible area
+ *    and the controls sat under the browser UI. 100dvh tracks the real
+ *    viewport, with a 100vh fallback for browsers that lack it.
+ *
+ * 2. In landscape the action buttons sat at the bottom right - exactly
+ *    where the thumb rests - and the hotbar ran underneath them. They
+ *    move to the left side above the hotbar instead, leaving the right
+ *    half free for the look/swipe area.
+ * ------------------------------------------------------------------ */
+
+html {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+}
+
+.touch-mode body {
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+/* The canvas fills exactly the visible area, never more. */
+.touch-mode #game-container,
+.touch-mode canvas {
+    width: 100vw;
+    height: 100dvh;
+}
+
+/* Make the whole page feel like a native app: no tap highlight, no
+   accidental text selection, no rubber-band scrolling. */
+.touch-mode * {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.touch-mode button,
+.touch-mode .slot,
+.touch-mode #hotbar {
+    touch-action: manipulation;
+}
+
+/* ---- landscape: the common way to hold a phone while playing -------- */
+@media (orientation: landscape) and (max-height: 560px) {
+    /* Actions move left, out of the thumb's rest position, and sit above
+       the hotbar rather than behind it. */
+    #touch-buttons {
+        left: calc(10px + env(safe-area-inset-left, 0px));
+        right: auto;
+        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+        grid-template-columns: repeat(2, auto);
+        gap: 8px;
+    }
+
+    #touch-buttons button {
+        width: 56px;
+        height: 56px;
+        font-size: 20px;
+    }
+
+    /* Inventory stays top-right, clear of the look area. */
+    #touch-inv {
+        width: 48px;
+        height: 48px;
+        font-size: 19px;
+        top: calc(8px + env(safe-area-inset-top, 0px));
+    }
+
+    /* The hotbar and the vitals shrink so they do not eat the view. */
+    #hotbar .slot {
+        width: 32px;
+        height: 32px;
+    }
+
+    #hud-vitals-row,
+    #hud-xp-container {
+        transform: scale(0.85);
+        transform-origin: bottom center;
+    }
+
+    /* The hint would sit across the middle of the screen; drop it. */
+    .touch-mode #touch-hint {
+        display: none;
+    }
+}
+
+/* ---- portrait: hotbar a touch smaller, hint kept --------------- */
+@media (orientation: portrait) {
+    #touch-buttons {
+        bottom: calc(150px + env(safe-area-inset-bottom, 0px));
     }
 }

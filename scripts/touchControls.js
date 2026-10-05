@@ -113,8 +113,10 @@ export function initTouchControls(opts) {
 
     // ---- virtual stick (left half) -------------------------------------
     const onStickDown = (e) => {
+        // Claim the stick only on the left half, and only if the stick is free.
         if (state.stickId !== null) return;
         if (isButton(e.target)) return;
+        if (!isLeftHalf(e.clientX)) return;
         state.stickId = e.pointerId;
         state.stickBase = { x: e.clientX, y: e.clientY };
         state.stickVec = { x: 0, y: 0 };
@@ -149,8 +151,11 @@ export function initTouchControls(opts) {
 
     // ---- look / tap / hold (right half) ---------------------------------
     const onLookDown = (e) => {
+        // Claim the look area only on the right half, and only if it is free.
+        // Without the half check a thumb on the stick also started a look drag.
         if (state.lookId !== null) return;
         if (isButton(e.target)) return;
+        if (isLeftHalf(e.clientX)) return;
         state.lookId = e.pointerId;
         state.lookPrev = { x: e.clientX, y: e.clientY };
         state.lookMoved = 0;
@@ -168,6 +173,9 @@ export function initTouchControls(opts) {
 
     const onLookMove = (e) => {
         if (e.pointerId !== state.lookId) return;
+        // A pointer that started on the stick must never drive the camera, even if
+        // it wanders into the right half while dragging.
+        if (state.stickId !== null && e.pointerId === state.stickId) return;
         const dx = e.clientX - state.lookPrev.x;
         const dy = e.clientY - state.lookPrev.y;
         state.lookPrev = { x: e.clientX, y: e.clientY };
@@ -185,6 +193,8 @@ export function initTouchControls(opts) {
 
     const onLookUp = (e) => {
         if (e.pointerId !== state.lookId) return;
+        // releasing one finger must not leave the camera spinning
+        state.lookId = null;
         state.lookId = null;
         if (state.holdTimer) {
             clearTimeout(state.holdTimer);
