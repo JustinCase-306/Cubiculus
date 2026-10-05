@@ -15,11 +15,38 @@ import { CHUNK_SIZE, CHUNK_HEIGHT, getBlock, getChunkData, generateChunkData, di
 import { GameSettings } from './settings.js';
 
 // Face direction vectors & face vertex corner offsets
+// Horizontal neighbour offset per face index, in FACE_DIRS order (+X, -X, +Y, -Y,
+// +Z, -Z). Only the four side faces are ever looked up.
+const WATER_FACE_DIR = [
+    [1, 0], [-1, 0], [0, 0], [0, 0], [0, 1], [0, -1]
+];
+
 // World-space Y of a water block's surface: the block ceiling minus 1/8 of a
 // block per spread level. Level 0 sits flush, level 7 sits 7/8 lower.
 function waterSurfaceY(x, y, z) {
     const lvl = getWaterLevel(x, y, z);
     return y + 1 - (lvl > 0 ? lvl / 8 : 0);
+}
+
+// Height of the water surface at a lattice point, shared by the four blocks that
+// meet there.
+//
+// LX/LZ is the lattice point itself (a block corner on the voxel grid), not the
+// block. The four blocks touching it are (LX, LZ), (LX-1, LZ), (LX, LZ-1) and
+// (LX-1, LZ-1), whichever face asks. Because the result depends only on the point,
+// every face meeting there gets the same height and the sloped surface closes.
+function waterCornerHeight(LX, y, LZ) {
+    let lowest = Infinity;
+    for (let dx = -1; dx <= 0; dx++) {
+        for (let dz = -1; dz <= 0; dz++) {
+            const nx = LX + dx, nz = LZ + dz;
+            const h = getBlock(nx, y, nz) === BLOCKS.WATER
+                ? waterSurfaceY(nx, y, nz)
+                : y + 1;                 // a solid neighbour sits higher
+            if (h < lowest) lowest = h;
+        }
+    }
+    return lowest;
 }
 
 export const FACE_DIRS = [
@@ -478,10 +505,23 @@ export function buildChunkMesh(cx, cz) {
                                                     let waterCornersSet = false;
                                                     if (type === BLOCKS.WATER) {
                                                         if (f !== 2 && neighbor === BLOCKS.WATER) {
-                                                            emitFace = false;
+                                                            // Only hide the side face when both surfaces are level.
+                                                            // If the neighbour sits lower, the sloped top has cut a
+                                                            // wedge away and this face is what closes it - without
+                                                            // it you look straight through the water onto the sand.
+                                                            const mine = waterSurfaceY(gx, y, gz);
+                                                            const theirs = waterSurfaceY(
+                                                                gx + WATER_FACE_DIR[f][0],
+                                                                y,
+                                                                gz + WATER_FACE_DIR[f][1]
+                                                            );
+                                                            if (Math.abs(mine - theirs) < 0.001) {
+                                                                emitFace = false;
+                                                            } else {
+                                                                sideDrop = mine - theirs;
+                                                            }
                                                         }
                                                         topDrop = 0;
-                                                        sideDrop = 0;
                                                     }
 
                                                     if (!emitFace) continue;
@@ -498,36 +538,14 @@ export function buildChunkMesh(cx, cz) {
 
                                                     // Sloped water surface, water only.
                                                     //
-                                                    // Each corner of the top face is placed at the average of the
-                                                    // water height on the two edges it touches, so the surface runs
-                                                    // as one continuous slope instead of eight stair steps.
+                                                    // Each corner takes the lowest surface of the four blocks meeting
+                                                    // there, so neighbouring faces agree exactly and join into one
+                                                    // continuous slope instead of eight stair steps.
                                                     if (type === BLOCKS.WATER && f === 2) {
-                                                        const hHere = waterSurfaceY(gx, y, gz);
-
-                                                        // the two edges this corner belongs to
-                                                        const edgeZ = (sign) => {
-                                                            const nx = gx, nz = gz + sign;
-                                                            return getBlock(nx, y, nz) === BLOCKS.WATER
-                                                                ? waterSurfaceY(nx, y, nz) : null;
-                                                        };
-                                                        const edgeX = (sign) => {
-                                                            const nx = gx + sign, nz = gz;
-                                                            return getBlock(nx, y, nz) === BLOCKS.WATER
-                                                                ? waterSurfaceY(nx, y, nz) : null;
-                                                        };
-
                                                         for (let c = 0; c < 4; c++) {
-                                                            const cz = corners[c][2] === 1 ? 1 : -1;
-                                                            const cx = corners[c][0] === 1 ? 1 : -1;
-                                                            const hz = edgeZ(cz);
-                                                            const hx = edgeX(cx);
-
-                                                            let h = hHere;
-                                                            if (hz !== null && hx !== null) h = (hz + hx) / 2;
-                                                            else if (hz !== null) h = hz;
-                                                            else if (hx !== null) h = hx;
-
-                                                            waterCornerY[c] = h;
+                                                            const cz = corners[c][2];
+                                                            const cx = corners[c][0];
+                                                            waterCornerY[c] = waterCornerHeight(gx + cx, y, gz + cz);
                                                         }
                                                         waterCornersSet = true;
                                                     }
