@@ -235,8 +235,10 @@ export function checkCraftingRecipes() {
     else if (in0 === BLOCKS.SAND && in1 === BLOCKS.SAND && in2 === BLOCKS.SAND && in3 === BLOCKS.SAND) {
         out = { type: BLOCKS.SANDSTONE, count: 1 };
     }
-    // Cobblestone + Leaves -> Mossy Cobblestone
-    else if (in0 === (BLOCKS.COBBLESTONE || BLOCKS.STONE) && in1 === BLOCKS.LEAVES && in2 === BLOCKS.AIR && in3 === BLOCKS.AIR) {
+    // Cobblestone (or Stone) + Leaves -> Mossy Cobblestone.
+    // The || has to sit outside the comparison: in0 === (A || B) evaluates the || first
+    // and collapses to A, so stone was silently rejected.
+    else if ((in0 === BLOCKS.COBBLESTONE || in0 === BLOCKS.STONE) && in1 === BLOCKS.LEAVES && in2 === BLOCKS.AIR && in3 === BLOCKS.AIR) {
         out = { type: BLOCKS.MOSSY_COBBLESTONE, count: 1 };
     }
     // 2 Planks vertical -> 4 Sticks
