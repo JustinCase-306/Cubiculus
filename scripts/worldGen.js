@@ -702,10 +702,10 @@ export function getSurfacePoint(gx, gz) {
     let surfaceY = h;
     let surfaceBlock = biome.floor;
 
-    if (h < WATER_LEVEL) {
+    if (h <= WATER_LEVEL) {
         surfaceY = WATER_LEVEL;
         surfaceBlock = (biome.name === 'SNOWY_TUNDRA') ? BLOCKS.ICE : BLOCKS.WATER;
-    } else if (h === WATER_LEVEL || h === WATER_LEVEL + 1) {
+    } else if (h === WATER_LEVEL + 1) {
         // Natural sandy or gravel beach shoreline
         if (biome.name === 'SNOWY_TUNDRA') {
             surfaceBlock = BLOCKS.GRAVEL;
