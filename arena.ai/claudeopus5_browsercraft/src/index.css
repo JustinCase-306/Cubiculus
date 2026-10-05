@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@theme {
+  --font-pixel: "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0a0e18;
+  overflow: hidden;
+  color: #e8eef7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+canvas {
+  display: block;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Minecraft-artige Buttons */
+.mc-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  background: linear-gradient(#8a8a8a, #6f6f6f);
+  color: #fff;
+  border: 2px solid #2b2b2b;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.35),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    0 3px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: filter 0.1s ease, transform 0.05s ease;
+}
+
+.mc-btn:hover {
+  filter: brightness(1.15);
+}
+
+.mc-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.25),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.mc-btn-green {
+  background: linear-gradient(#5aa84a, #3f8235);
+}
+
+.mc-btn-red {
+  background: linear-gradient(#b2513f, #8d3c2d);
+}
+
+.mc-panel {
+  background: rgba(14, 18, 28, 0.9);
+  border: 2px solid #3b4557;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.08),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.45),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  background: rgba(20, 24, 34, 0.72);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.slot-active {
+  border-color: #fff;
+  background: rgba(60, 70, 90, 0.85);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    inset 0 0 12px rgba(255, 255, 255, 0.2);
+  transform: scale(1.08);
+}
+
+input[type="range"] {
+  accent-color: #5aa84a;
+}
+
+.fade-in {
+  animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-in {
+  animation: toastIn 0.2s ease-out;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

@@ -979,7 +979,18 @@ export function getChunkMaterials() {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.15,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            // Water must not write depth.
+            //
+            // depthWrite defaults to true, so with transparent:true every water quad
+            // was punching a hole in the depth buffer. A near water block then
+            // occluded the water behind it while depthTest still passed, and a wide
+            // lake rendered as separated floating plates with the floor showing
+            // between them - the artefact in the screenshot.
+            //
+            // With depthWrite off, water no longer occludes other water; only the
+            // opaque terrain does. That is what makes a lake read as one body.
+            depthWrite: false
         });
     }
 

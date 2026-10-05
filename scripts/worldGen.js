@@ -763,7 +763,14 @@ export function generateChunkData(cx, cz) {
                 }
 
                 if (!isCave) {
-                    if (y <= h) {
+                    // Water line: a column whose ground reaches exactly WATER_LEVEL is
+                    // still underwater. Treating h === WATER_LEVEL as land put single
+                    // sand blocks on the lake surface (73 of 837 columns in one test
+                    // area), which read as pale patches and one-block islands floating
+                    // in the water. The beach starts one block higher, at WATER_LEVEL+1.
+                    const waterLine = h === WATER_LEVEL && y === WATER_LEVEL;
+
+                    if (y <= h && !waterLine) {
                         if (y === h) {
                             const slope = slopes[colIdx];
                             // Snow line: above this altitude the ground is white.
